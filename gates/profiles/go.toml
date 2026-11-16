@@ -1,0 +1,50 @@
+# Go gate profile. Assumes the go toolchain; staticcheck and govulncheck optional.
+# The race detector needs cgo, so -race runs in CI (Linux) only.
+test_globs = ["**/*_test.go"]
+
+[[step]]
+name = "format"
+category = "format"
+cmd = "gofmt -l ."
+stages = ["pre-commit", "pre-push", "ci"]
+when_files = ["**/*.go"]
+fail_on_output = true
+
+[[step]]
+name = "vet"
+category = "lint"
+cmd = "go vet ./..."
+stages = ["pre-push", "ci"]
+requires_paths = ["go.mod"]
+
+[[step]]
+name = "staticcheck"
+category = "lint"
+cmd = "staticcheck ./..."
+stages = ["ci"]
+optional = true
+requires_paths = ["go.mod"]
+install = "go install honnef.co/go/tools/cmd/staticcheck@latest"
+
+[[step]]
+name = "test"
+category = "test"
+cmd = "go test -cover ./..."
+stages = ["pre-push"]
+requires_paths = ["go.mod"]
+
+[[step]]
+name = "test-race"
+category = "test"
+cmd = "go test -race -coverprofile=coverage.out ./..."
+stages = ["ci"]
+requires_paths = ["go.mod"]
+
+[[step]]
+name = "vulncheck"
+category = "security"
+cmd = "govulncheck ./..."
+stages = ["ci"]
+optional = true
+requires_paths = ["go.mod"]
+install = "go install golang.org/x/vuln/cmd/govulncheck@latest"

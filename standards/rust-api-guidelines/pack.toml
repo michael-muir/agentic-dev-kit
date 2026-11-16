@@ -1,0 +1,10 @@
+id = "rust-api-guidelines"
+name = "Rust API Guidelines"
+stack = "rust"
+summary = "Rust API Guidelines and standard naming, with rustfmt, plus clippy pedantic and missing-docs lints as errors (replaces the profile's clippy step)."
+sources = [
+  "https://rust-lang.github.io/api-guidelines/checklist.html",
+  "https://doc.rust-lang.org/stable/style-guide/",
+  "https://rust-lang.github.io/rust-clippy/master/",
+]
+conflicts = []

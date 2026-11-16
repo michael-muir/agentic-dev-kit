@@ -1,0 +1,9 @@
+id = "javascript-recommended"
+name = "JavaScript recommended"
+stack = "javascript"
+summary = "ESLint recommended rules plus a small set of safety rules (strict equality, no var, prefer-const, no implicit globals), with Prettier formatting."
+sources = [
+  "https://eslint.org/docs/latest/rules/",
+  "https://prettier.io/docs/en/options.html",
+]
+conflicts = ["typescript-strict"]

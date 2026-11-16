@@ -1,0 +1,9 @@
+id = "cpp-core-guidelines"
+name = "C++ Core Guidelines"
+stack = "cpp"
+summary = "C++ Core Guidelines (Stroustrup and Sutter), enforced through clang-tidy cppcoreguidelines, bugprone, modernize and performance checks, with clang-format layout."
+sources = [
+  "https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines",
+  "https://clang.llvm.org/extra/clang-tidy/checks/list.html",
+]
+conflicts = ["cpp-google"]

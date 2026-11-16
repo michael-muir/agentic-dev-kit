@@ -1,0 +1,18 @@
+# Aerospace domain checks. Advisory by default: findings feed the adversary and reviewers.
+# Make them blocking per project by setting advisory = false through .agentic/config.toml overrides.
+
+[[step]]
+name = "unit-suffixes"
+category = "domain"
+cmd = "{python} {kit}/agents/domains/aerospace-engineer/checks/unit_suffixes.py"
+stages = ["pre-push", "ci"]
+advisory = true
+
+[[step]]
+name = "cpp-safety-tidy"
+category = "domain"
+cmd = "clang-tidy -p build --quiet --checks=-*,bugprone-*,cert-*,cppcoreguidelines-narrowing-conversions,misc-redundant-expression --warnings-as-errors=* {files:**/*.cpp,**/*.cc,**/*.cxx}"
+stages = ["ci"]
+optional = true
+advisory = true
+requires_paths = ["build/compile_commands.json"]

@@ -1,0 +1,11 @@
+# agentic-dev-kit standards pack: cpp-core-guidelines
+# The guidelines don't prescribe layout. This is a conventional LLVM-based style.
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 100
+PointerAlignment: Left
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+InsertBraces: true
+IncludeBlocks: Regroup
+SortIncludes: CaseSensitive

@@ -1,0 +1,10 @@
+id = "python-pep8"
+name = "PEP 8 + PEP 257"
+stack = "python"
+summary = "PEP 8 style and PEP 257 docstrings, enforced by ruff (format, pycodestyle, pyflakes, isort, pep8-naming, pydocstyle, pyupgrade, bugbear)."
+sources = [
+  "https://peps.python.org/pep-0008/",
+  "https://peps.python.org/pep-0257/",
+  "https://docs.astral.sh/ruff/rules/",
+]
+conflicts = ["python-strict"]

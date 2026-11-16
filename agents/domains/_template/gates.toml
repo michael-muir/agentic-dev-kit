@@ -1,0 +1,10 @@
+# Optional deterministic checks for this domain, in the same format as gates/profiles/*.toml.
+# They run only in projects that enable this domain. Put helper scripts in ./checks/ and call
+# them with {python} {kit}/agents/domains/<id>/checks/<script>.py
+#
+# [[step]]
+# name = "my-check"
+# category = "domain"
+# cmd = "{python} {kit}/agents/domains/my-domain-expert/checks/my_check.py"
+# stages = ["pre-push", "ci"]
+# advisory = true

@@ -1,0 +1,10 @@
+id = "lua-default"
+name = "Lua conventions"
+stack = "lua"
+summary = "Common Lua conventions (lua-users style guide and Olivine Labs), enforced through luacheck and StyLua, with busted-aware test globals."
+sources = [
+  "http://lua-users.org/wiki/LuaStyleGuide",
+  "https://github.com/Olivine-Labs/lua-style-guide",
+  "https://luacheck.readthedocs.io/en/stable/config.html",
+]
+conflicts = []

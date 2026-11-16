@@ -1,0 +1,53 @@
+# Python gate profile. Assumes ruff, mypy, pytest + pytest-cov (and optionally pip-audit, mutmut).
+# Coverage threshold: change --cov-fail-under through [gate.overrides] in .agentic/config.toml.
+test_globs = ["tests/**", "test/**", "**/test_*.py", "**/*_test.py"]
+
+[[step]]
+name = "format"
+category = "format"
+cmd = "ruff format --check ."
+stages = ["pre-commit", "pre-push", "ci"]
+when_files = ["**/*.py"]
+install = "pip install ruff"
+
+[[step]]
+name = "lint"
+category = "lint"
+cmd = "ruff check ."
+stages = ["pre-commit", "pre-push", "ci"]
+when_files = ["**/*.py"]
+install = "pip install ruff"
+
+[[step]]
+name = "types"
+category = "types"
+cmd = "mypy ."
+stages = ["pre-push", "ci"]
+when_files = ["**/*.py"]
+install = "pip install mypy"
+
+[[step]]
+name = "test"
+category = "test"
+cmd = "pytest -q --cov --cov-report=term-missing --cov-fail-under=80"
+stages = ["pre-push", "ci"]
+when_files = ["**/*.py"]
+install = "pip install pytest pytest-cov"
+
+[[step]]
+name = "audit"
+category = "security"
+cmd = "pip-audit"
+stages = ["ci"]
+optional = true
+install = "pip install pip-audit"
+
+[[step]]
+name = "mutation"
+category = "mutation"
+cmd = "mutmut run"
+stages = ["ci"]
+optional = true
+advisory = true
+timeout = 3600
+install = "pip install mutmut"

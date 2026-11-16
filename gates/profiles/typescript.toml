@@ -1,0 +1,50 @@
+# TypeScript gate profile (covers JavaScript files in the same project too).
+# Assumes prettier, eslint and typescript as devDependencies, and an `npm test` script that
+# enforces its own coverage threshold.
+test_globs = ["test/**", "tests/**", "**/__tests__/**", "**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx", "**/*.test.js", "**/*.spec.js", "**/*.test.mjs"]
+
+[[step]]
+name = "format"
+category = "format"
+cmd = "npx --no-install prettier --check ."
+stages = ["pre-commit", "pre-push", "ci"]
+when_files = ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.mjs", "**/*.cjs", "**/*.jsx"]
+requires_paths = ["node_modules"]
+
+[[step]]
+name = "lint"
+category = "lint"
+cmd = "npx --no-install eslint ."
+stages = ["pre-commit", "pre-push", "ci"]
+when_files = ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+requires_paths = ["node_modules"]
+
+[[step]]
+name = "types"
+category = "types"
+cmd = "npx --no-install tsc --noEmit"
+stages = ["pre-push", "ci"]
+requires_paths = ["tsconfig.json", "node_modules"]
+
+[[step]]
+name = "test"
+category = "test"
+cmd = "npm test"
+stages = ["pre-push", "ci"]
+requires_paths = ["package.json"]
+
+[[step]]
+name = "audit"
+category = "security"
+cmd = "npm audit --audit-level=high"
+stages = ["ci"]
+requires_paths = ["package-lock.json"]
+
+[[step]]
+name = "mutation"
+category = "mutation"
+cmd = "npx --no-install stryker run"
+stages = ["ci"]
+advisory = true
+timeout = 3600
+requires_paths = ["node_modules/@stryker-mutator/core"]

@@ -1,0 +1,11 @@
+id = "python-strict"
+name = "PEP 8 + strict typing and linting"
+stack = "python"
+summary = "Everything in python-pep8, plus a broad ruff rule set (simplify, pathlib, security, annotations, pylint, ruff-specific) and mypy --strict."
+sources = [
+  "https://peps.python.org/pep-0008/",
+  "https://peps.python.org/pep-0484/",
+  "https://mypy.readthedocs.io/en/stable/existing_code.html",
+  "https://docs.astral.sh/ruff/rules/",
+]
+conflicts = ["python-pep8"]

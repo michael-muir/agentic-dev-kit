@@ -1,0 +1,48 @@
+# Rust gate profile. Assumes rustup with rustfmt + clippy; cargo-audit and cargo-mutants optional.
+# Acceptance and adversarial tests go in tests/ (integration tests), so they can be locked
+# without locking src/ files that also hold unit tests.
+test_globs = ["tests/**", "**/tests/**"]
+
+[[step]]
+name = "format"
+category = "format"
+cmd = "cargo fmt --all -- --check"
+stages = ["pre-commit", "pre-push", "ci"]
+requires_paths = ["Cargo.toml"]
+install = "rustup component add rustfmt"
+
+[[step]]
+name = "clippy"
+category = "lint"
+cmd = "cargo clippy --all-targets --all-features -- -D warnings"
+stages = ["pre-push", "ci"]
+requires_paths = ["Cargo.toml"]
+install = "rustup component add clippy"
+
+[[step]]
+name = "test"
+category = "test"
+cmd = "cargo test --all-features"
+stages = ["pre-push", "ci"]
+requires_paths = ["Cargo.toml"]
+
+[[step]]
+name = "audit"
+category = "security"
+cmd = "cargo audit"
+stages = ["ci"]
+optional = true
+tool = "cargo-audit"
+requires_paths = ["Cargo.lock"]
+install = "cargo install cargo-audit"
+
+[[step]]
+name = "mutation"
+category = "mutation"
+cmd = "cargo mutants --no-shuffle"
+stages = ["ci"]
+optional = true
+advisory = true
+tool = "cargo-mutants"
+timeout = 3600
+install = "cargo install cargo-mutants"

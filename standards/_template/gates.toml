@@ -1,0 +1,9 @@
+# Optional extra gate steps for this pack (same fields as gates/profiles/*.toml).
+# Use replaces = "<stack>:<step>" to take the place of a profile step instead of running both.
+#
+# [[step]]
+# name = "strict-lint"
+# category = "lint"
+# cmd = "some-linter --strict"
+# stages = ["pre-push", "ci"]
+# replaces = "python:lint"

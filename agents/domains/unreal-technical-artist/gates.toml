@@ -1,0 +1,10 @@
+# Unreal technical-art checks. Runs only when the project enables this domain.
+# Extra allowed prefixes: set ALLOWED_PREFIXES (comma-separated) in the environment, or edit
+# the defaults in checks/asset_naming.py through an upstream change.
+
+[[step]]
+name = "asset-naming"
+category = "domain"
+cmd = "{python} {kit}/agents/domains/unreal-technical-artist/checks/asset_naming.py"
+stages = ["pre-commit", "pre-push", "ci"]
+when_files = ["**/*.uasset", "**/*.umap"]

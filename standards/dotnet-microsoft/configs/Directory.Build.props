@@ -1,0 +1,17 @@
+<!-- agentic-dev-kit standards pack: dotnet-microsoft
+     Applies to every project under this folder. Makes the .editorconfig style rules and the
+     recommended analyzers part of the build, and makes warnings fail it. -->
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- IDE0005 (unnecessary usings) only reports at build when XML docs are generated. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Missing XML comments are a review matter in this pack, not a build error. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>

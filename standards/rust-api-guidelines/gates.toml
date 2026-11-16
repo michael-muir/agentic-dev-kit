@@ -1,0 +1,9 @@
+# Stricter clippy: pedantic lints and missing docs become errors.
+# A few pedantic lints that fight common, reasonable code are allowed.
+[[step]]
+name = "clippy-pedantic"
+category = "lint"
+cmd = "cargo clippy --all-targets --all-features -- -D warnings -W clippy::pedantic -W missing_docs -A clippy::module_name_repetitions -A clippy::must_use_candidate"
+stages = ["pre-push", "ci"]
+requires_paths = ["Cargo.toml"]
+replaces = "rust:clippy"

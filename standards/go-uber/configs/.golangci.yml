@@ -1,0 +1,27 @@
+# agentic-dev-kit standards pack: go-uber (golangci-lint v2 config format)
+version: "2"
+linters:
+  default: standard        # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - revive
+    - errorlint
+    - errname              # ErrX variables, XError types
+    - gocritic
+    - nolintlint           # //nolint must name the linter and give a reason
+    - exhaustive           # switch over enums covers every case
+    - bodyclose
+    - noctx
+    - prealloc
+    - unconvert
+    - misspell
+  settings:
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+  exclusions:
+    paths:
+      - .agentic
+formatters:
+  enable:
+    - gofmt
+    - goimports

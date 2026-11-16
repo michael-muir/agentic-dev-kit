@@ -1,0 +1,2 @@
+# Gate reports are regenerated on every run; CI uploads them as artifacts.
+reports/

@@ -1,0 +1,6 @@
+#!/bin/sh
+# agentic-dev-kit: full local gate (types, build, tests, traceability) before every push.
+ROOT="$(git rev-parse --show-toplevel)"
+. "$ROOT/.agentic/kit/gates/hooks/_find_python.sh"
+cd "$ROOT" || exit 2
+exec $PY "$ROOT/.agentic/kit/gates/gate.py" run --stage pre-push

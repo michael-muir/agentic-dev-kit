@@ -1,0 +1,6 @@
+* text=auto
+# Git hooks and shell scripts must keep LF endings or they fail on Linux/macOS and in Git Bash.
+gates/hooks/* text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.ps1 text eol=crlf

@@ -1,0 +1,10 @@
+id = "dotnet-stylecop"
+name = "Microsoft C# conventions + StyleCop"
+stack = "dotnet"
+summary = "Everything in dotnet-microsoft, plus StyleCop.Analyzers for member ordering, layout, readability and required XML documentation on public API, all failing the build."
+sources = [
+  "https://learn.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions",
+  "https://learn.microsoft.com/dotnet/standard/design-guidelines/",
+  "https://github.com/DotNetAnalyzers/StyleCopAnalyzers/blob/master/DOCUMENTATION.md",
+]
+conflicts = ["dotnet-microsoft"]

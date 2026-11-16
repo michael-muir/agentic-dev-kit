@@ -1,0 +1,7 @@
+# Pack metadata. The folder name must equal id.
+id = "stack-name"
+name = "Human-readable standard name"
+stack = "python"            # python | lua | cpp | dotnet | javascript | typescript | rust | go
+summary = "One line: which standard, enforced how."
+sources = ["https://example.com/the-published-standard"]
+conflicts = []              # pack ids that ship the same config files or contradict this one

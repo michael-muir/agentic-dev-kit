@@ -1,0 +1,44 @@
+# C# / .NET gate profile. Assumes the dotnet SDK at the repo root solution (or single project).
+# Coverage collection needs coverlet.collector in the test projects.
+test_globs = ["tests/**", "test/**", "**/*Tests/**", "**/*.Tests/**", "**/*Tests.cs", "**/*Test.cs"]
+
+[[step]]
+name = "format"
+category = "format"
+cmd = "dotnet format --verify-no-changes"
+stages = ["pre-commit", "pre-push", "ci"]
+when_files = ["**/*.cs", "**/*.csproj", "**/*.sln", "**/*.slnx"]
+install = ".NET SDK"
+
+[[step]]
+name = "build"
+category = "build"
+cmd = "dotnet build -warnaserror"
+stages = ["pre-push", "ci"]
+when_files = ["**/*.csproj", "**/*.sln", "**/*.slnx"]
+
+[[step]]
+name = "test"
+category = "test"
+cmd = "dotnet test --no-build --collect:\"XPlat Code Coverage\""
+stages = ["pre-push", "ci"]
+when_files = ["**/*.csproj", "**/*.sln", "**/*.slnx"]
+
+[[step]]
+name = "vulnerable-packages"
+category = "security"
+cmd = "dotnet list package --vulnerable --include-transitive"
+stages = ["ci"]
+when_files = ["**/*.csproj"]
+fail_on_match = "has the following vulnerable packages"
+
+[[step]]
+name = "mutation"
+category = "mutation"
+cmd = "dotnet stryker"
+stages = ["ci"]
+optional = true
+advisory = true
+tool = "dotnet-stryker"
+timeout = 3600
+install = "dotnet tool install -g dotnet-stryker"

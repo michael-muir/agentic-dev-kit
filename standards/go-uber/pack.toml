@@ -1,0 +1,10 @@
+id = "go-uber"
+name = "Uber Go Style Guide"
+stack = "go"
+summary = "Uber Go Style Guide, on top of Effective Go, enforced through a stricter golangci-lint set (revive, errorlint, errname, gocritic, nolintlint, exhaustive, bodyclose and more)."
+sources = [
+  "https://github.com/uber-go/guide/blob/master/style.md",
+  "https://go.dev/doc/effective_go",
+  "https://golangci-lint.run/usage/configuration/",
+]
+conflicts = ["go-effective"]

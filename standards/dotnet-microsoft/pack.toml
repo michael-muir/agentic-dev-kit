@@ -1,0 +1,11 @@
+id = "dotnet-microsoft"
+name = "Microsoft C# coding conventions"
+stack = "dotnet"
+summary = "Microsoft C# coding conventions and .NET Framework Design Guidelines, enforced through .editorconfig code-style rules and the built-in .NET analyzers at build time."
+sources = [
+  "https://learn.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions",
+  "https://learn.microsoft.com/dotnet/csharp/fundamentals/coding-style/identifier-names",
+  "https://learn.microsoft.com/dotnet/standard/design-guidelines/",
+  "https://learn.microsoft.com/dotnet/fundamentals/code-analysis/overview",
+]
+conflicts = ["dotnet-stylecop"]

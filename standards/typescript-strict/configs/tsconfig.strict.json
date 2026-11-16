@@ -1,0 +1,15 @@
+{
+  "//": "agentic-dev-kit standards pack: typescript-strict. Add \"extends\": \"./tsconfig.strict.json\" to your tsconfig.json.",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "useUnknownInCatchVariables": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true
+  }
+}

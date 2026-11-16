@@ -1,0 +1,9 @@
+id = "cpp-google"
+name = "Google C++ Style Guide"
+stack = "cpp"
+summary = "Google C++ Style Guide: clang-format Google style, plus clang-tidy google-*, bugprone and readability-identifier-naming configured to Google's naming rules."
+sources = [
+  "https://google.github.io/styleguide/cppguide.html",
+  "https://clang.llvm.org/extra/clang-tidy/checks/list.html",
+]
+conflicts = ["cpp-core-guidelines"]

@@ -1,0 +1,30 @@
+# agentic-dev-kit standards pack: python-pep8
+# ruff.toml takes precedence over [tool.ruff] in pyproject.toml. Keep ruff settings in one place.
+# PEP 8 lets a team agree on lines up to 99 characters. 88 is the ruff/black default.
+line-length = 88
+extend-exclude = [".agentic"]
+
+[lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes
+  "I",        # isort
+  "N",        # pep8-naming
+  "D",        # pydocstyle (PEP 257)
+  "UP",       # pyupgrade
+  "B",        # flake8-bugbear
+]
+ignore = [
+  "D1",       # missing docstrings: a review matter (see standard), not a hard error
+]
+
+[lint.pydocstyle]
+convention = "pep257"
+
+[lint.per-file-ignores]
+"tests/**" = ["D"]
+"**/test_*.py" = ["D"]
+
+[format]
+quote-style = "double"
+docstring-code-format = true

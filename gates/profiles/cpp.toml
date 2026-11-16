@@ -1,0 +1,49 @@
+# C++ gate profile. Assumes CMake + CTest, clang-format, clang-tidy (and optionally cppcheck).
+# Projects using presets can override, e.g. "cpp:configure" = "cmake --preset dev".
+# For sanitizers in CI, override cpp:configure with -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined".
+test_globs = ["tests/**", "test/**", "**/*_test.cpp", "**/*_tests.cpp", "**/test_*.cpp"]
+
+[[step]]
+name = "format"
+category = "format"
+cmd = "clang-format --dry-run --Werror {files:**/*.cpp,**/*.cc,**/*.cxx,**/*.h,**/*.hpp,**/*.hh}"
+stages = ["pre-commit", "pre-push", "ci"]
+install = "LLVM / clang-format"
+
+[[step]]
+name = "configure"
+category = "build"
+cmd = "cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+stages = ["pre-push", "ci"]
+requires_paths = ["CMakeLists.txt"]
+install = "CMake"
+
+[[step]]
+name = "build"
+category = "build"
+cmd = "cmake --build build --parallel"
+stages = ["pre-push", "ci"]
+requires_paths = ["CMakeLists.txt"]
+
+[[step]]
+name = "test"
+category = "test"
+cmd = "ctest --test-dir build --output-on-failure"
+stages = ["pre-push", "ci"]
+requires_paths = ["CMakeLists.txt"]
+
+[[step]]
+name = "tidy"
+category = "lint"
+cmd = "clang-tidy -p build --quiet --warnings-as-errors=* {files:**/*.cpp,**/*.cc,**/*.cxx}"
+stages = ["ci"]
+requires_paths = ["build/compile_commands.json"]
+install = "LLVM / clang-tidy"
+
+[[step]]
+name = "cppcheck"
+category = "lint"
+cmd = "cppcheck --error-exitcode=1 --enable=warning,performance,portability --inline-suppr --quiet -i build ."
+stages = ["ci"]
+optional = true
+install = "cppcheck"

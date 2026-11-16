@@ -1,0 +1,10 @@
+id = "go-effective"
+name = "Effective Go + Go Code Review Comments"
+stack = "go"
+summary = "Effective Go and the Go Code Review Comments, enforced through gofmt, goimports and golangci-lint's standard linters plus revive, errorlint and misspell."
+sources = [
+  "https://go.dev/doc/effective_go",
+  "https://go.dev/wiki/CodeReviewComments",
+  "https://golangci-lint.run/usage/configuration/",
+]
+conflicts = ["go-uber"]

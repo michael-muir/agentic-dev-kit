@@ -1,0 +1,36 @@
+# Lua gate profile. Assumes stylua, luacheck, busted (luarocks install busted luacheck luacov).
+test_globs = ["spec/**", "tests/**", "test/**", "**/*_spec.lua", "**/*_test.lua"]
+
+[[step]]
+name = "format"
+category = "format"
+cmd = "stylua --check ."
+stages = ["pre-commit", "pre-push", "ci"]
+when_files = ["**/*.lua"]
+install = "cargo install stylua  (or download a release binary)"
+
+[[step]]
+name = "lint"
+category = "lint"
+cmd = "luacheck ."
+stages = ["pre-commit", "pre-push", "ci"]
+when_files = ["**/*.lua"]
+install = "luarocks install luacheck"
+
+[[step]]
+name = "test"
+category = "test"
+cmd = "busted"
+stages = ["pre-push", "ci"]
+when_files = ["**/*.lua"]
+install = "luarocks install busted"
+
+[[step]]
+name = "coverage"
+category = "coverage"
+cmd = "busted --coverage"
+stages = ["ci"]
+optional = true
+advisory = true
+tool = "luacov"
+install = "luarocks install luacov"

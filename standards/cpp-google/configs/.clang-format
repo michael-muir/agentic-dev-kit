@@ -1,0 +1,3 @@
+# agentic-dev-kit standards pack: cpp-google
+BasedOnStyle: Google
+InsertBraces: true

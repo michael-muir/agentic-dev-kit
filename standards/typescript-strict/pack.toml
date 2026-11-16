@@ -1,0 +1,10 @@
+id = "typescript-strict"
+name = "TypeScript strict"
+stack = "typescript"
+summary = "Strict TypeScript compiler options, plus typescript-eslint strict-type-checked and stylistic-type-checked rules, with Prettier formatting."
+sources = [
+  "https://www.typescriptlang.org/tsconfig#strict",
+  "https://typescript-eslint.io/users/configs#strict-type-checked",
+  "https://prettier.io/docs/en/options.html",
+]
+conflicts = ["javascript-recommended"]

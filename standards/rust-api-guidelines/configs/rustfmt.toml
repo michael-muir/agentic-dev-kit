@@ -1,0 +1,4 @@
+# agentic-dev-kit standards pack: rust-api-guidelines (stable rustfmt options only)
+use_field_init_shorthand = true
+use_try_shorthand = true
+newline_style = "Unix"
