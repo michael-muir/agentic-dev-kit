@@ -48,11 +48,14 @@ def main() -> int:
 
     print("install")
     out = run(sys.executable, str(KIT / "install" / "install.py"), "--target", str(WORK), "--stacks", "python",
-              "--domains", "aerospace-engineer,unreal-technical-artist",
+              "--domains", "aerospace-engineer,unreal-technical-artist,accessibility-expert",
               "--tools", "claude,copilot,cursor,gemini,generic").stdout
     check("available for python: python-pep8, python-strict" in out, "hint lists packs when none selected")
     for rel in ("AGENTS.md", "CLAUDE.md", "GEMINI.md", ".agentic/REGISTRY.md", ".agentic/config.toml",
                 ".agentic/STATE.md", ".claude/agents/orchestrator.md", ".claude/agents/aerospace-engineer.md",
+                ".claude/agents/docs-writer.md", ".claude/agents/performance-reviewer.md",
+                ".claude/agents/release-manager.md", ".claude/agents/accessibility-expert.md",
+                ".claude/skills/accessibility-audit/SKILL.md", ".claude/skills/release-process/SKILL.md",
                 ".claude/skills/test-driven-slices/SKILL.md", ".claude/skills/units-and-frames-review/SKILL.md",
                 ".github/agents/adversary.agent.md", ".github/skills/handoff/SKILL.md",
                 ".cursor/rules/agentic-implementer.mdc", ".agentic/prompts/verifier.md",
@@ -106,6 +109,17 @@ def main() -> int:
     out = run(sys.executable, ".agentic/kit/gates/gate.py", *only, "aerospace-engineer:unit-suffixes",
               expect=0).stdout
     check("WARN" in out, "aerospace unit-suffix check warns (advisory)")
+    page = WORK / "web/index.html"
+    page.parent.mkdir()
+    page.write_text('<html><body><img src="a.png"><div onclick="go()">Go</div></body></html>\n', "utf-8")
+    out = run(sys.executable, ".agentic/kit/gates/gate.py", *only, "accessibility-expert:markup-basics",
+              expect=0).stdout
+    check("WARN" in out and "[1.1.1]" in out and "[3.1.1]" in out and "[2.1.1]" in out,
+          "accessibility markup check flags alt, lang and clickable div (advisory)")
+    page.write_text('<html lang="en"><body><img src="a.png" alt=""><button>Go</button></body></html>\n', "utf-8")
+    out = run(sys.executable, ".agentic/kit/gates/gate.py", *only, "accessibility-expert:markup-basics",
+              expect=0).stdout
+    check("[PASS] accessibility-expert:markup-basics" in out, "accessibility markup check passes clean markup")
 
     report = (WORK / ".agentic/reports/gate-latest.md").read_text("utf-8")
     check(report.startswith("# Gate report"), "report written")
@@ -210,6 +224,17 @@ def test_scope() -> None:
     commit(repo, "test: lock\n\nAgent-Role: test-designer")
     run(sys.executable, *scope, cwd=repo, expect=0)
     check(True, "test-designer may change the lock file")
+
+    (repo / "docs").mkdir()
+    (repo / "docs/guide.md").write_text("# Guide\n", "utf-8")
+    commit(repo, "docs: guide\n\nAgent-Role: docs-writer")
+    run(sys.executable, *scope, cwd=repo, expect=0)
+    check(True, "docs-writer may change docs/")
+    (repo / "docs/CODEOWNERS").write_text("* @someone\n", "utf-8")
+    commit(repo, "docs: owners\n\nAgent-Role: docs-writer")
+    out = run(sys.executable, *scope, cwd=repo, expect=1).stdout
+    check("docs/CODEOWNERS is outside" in out, "a broad docs/** grant doesn't reach protected docs/CODEOWNERS")
+    run("git", "reset", "-q", "--hard", "HEAD~1", cwd=repo)
 
     (repo / "notes.md").write_text("x\n", "utf-8")
     commit(repo, "docs: note\n\nAgent-Role: wizard")

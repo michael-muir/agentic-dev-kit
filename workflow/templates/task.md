@@ -5,7 +5,9 @@
 | Spec | `../specs/<spec>.md` |
 | Track | lite \| full |
 | Status | draft \| ready \| in-progress \| in-review \| changes-requested \| blocked \| done |
-| Phase | spec \| design \| tests \| implement \| verify \| review \| integrate |
+| Phase | spec \| design \| tests \| implement \| verify \| review \| docs \| integrate |
+| Docs | needed \| none (reason) |
+| Performance | budget: <link to spec constraint> \| none |
 | Owner | <role id that acts next> |
 | Blocked by | none \| T-03, T-04 |
 | Branch | task/NN-slug |

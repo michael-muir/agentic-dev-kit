@@ -16,6 +16,13 @@ Answer these four questions about the change:
 
 All "no" → **lite**.
 
+Two more questions add a role on either track:
+
+| Question | "Yes" adds |
+|---|---|
+| **Performance**: does the spec set a budget (latency, memory, frame time, size), or does the change touch a hot path or data volume? | performance-reviewer in `review` |
+| **Docs**: does the change alter anything a user, integrator or operator sees (behaviour, API, CLI, config, errors)? | docs-writer in the `docs` phase (task field `Docs: needed`) |
+
 ## Lite
 
 `tests → implement → verify → review (spec + standards)`

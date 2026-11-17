@@ -5,7 +5,7 @@ kind: core
 summary: Packages verified, reviewed work into clean conventional commits and a pull request with acceptance-criteria evidence, the gate result, the review record and a merge-risk rating. Never merges without a human.
 tools: [read, search, edit, shell]
 skills: [pull-request-evidence, handoff]
-writes: [CHANGELOG.md, .agentic/STATE.md, .agentic/tasks/**, .agentic/specs/**, .agentic/handoffs/**]
+writes: [.agentic/STATE.md, .agentic/tasks/**, .agentic/specs/**, .agentic/handoffs/**]
 fresh_context: true
 model_hint: any
 ---
@@ -44,4 +44,5 @@ Merging is the human's decision. You may push the task branch and open the PR. F
 to shared branches, and hook bypasses, need the human's explicit go-ahead in chat.
 
 ## Hand off
-To the human (PR review). After the merge → retro, if this closed out a spec.
+To the human (PR review). After the merge → retro, if this closed out a spec. Releases are
+the release-manager's job.

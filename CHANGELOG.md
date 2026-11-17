@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 — 2026-11-16
+
+- New core roles: **docs-writer** (user-facing docs and Unreleased changelog entries, with
+  every example run), **performance-reviewer** (measured against spec budgets and the base
+  branch, leaving benchmarks behind) and **release-manager** (semver, dated changelog,
+  release notes, tag handed to a human). New skills: docs-writing, performance-review,
+  release-process.
+- New domain expert: **accessibility-expert** (WCAG 2.2 AA), with the accessibility-audit
+  skill, an advisory markup check, and an optional pa11y-ci step.
+- Pipeline: a `docs` phase between review and integrate; the Performance and Docs questions
+  in tracks.md; a release flow; `Docs` and `Performance` fields in the task template.
+- The integrator no longer writes CHANGELOG.md (the docs-writer and release-manager do).
+- builtin:scope: a protected path is granted only by a pattern naming its protected location,
+  so a broad grant like `docs/**` no longer reaches `docs/CODEOWNERS`.
+
 ## 0.3.0 — 2026-11-16
 
 - Enforcement: `builtin:scope` checks each agent commit (`Agent-Role:` trailer) against its

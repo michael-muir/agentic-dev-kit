@@ -10,8 +10,16 @@ file and in `STATE.md`, so any agent can tell where work stands.
 | `tests` | test-designer | Every task AC has a test naming its id, observed red, tests locked | `implement` |
 | `implement` | implementer | Task ACs green, `gate run --stage pre-push` passes | `verify` |
 | `verify` | verifier | `gate run --stage ci` report for HEAD is a pass | `review` |
-| `review` | spec-reviewer, standards-reviewer, + (full) adversary, security-reviewer, domain experts | Every reviewer verdict is `pass`, or remaining findings are explicitly accepted by a human | `integrate` |
+| `review` | spec-reviewer, standards-reviewer, + (full) adversary, security-reviewer, domain experts, + performance-reviewer when the task has a performance budget or touches a hot path | Every reviewer verdict is `pass`, or remaining findings are explicitly accepted by a human | `docs` (task Docs = needed) / `integrate` |
+| `docs` | docs-writer | User-facing docs and the Unreleased changelog entry updated, with every example run | `integrate` |
 | `integrate` | integrator | PR open with evidence; CI green | `done` once a human merges |
+
+## Releases
+
+Releases run apart from the task flow. When the human asks for a release, the orchestrator
+creates a release task with Owner **release-manager**. The release manager prepares a
+`release/vX.Y.Z` PR (version bumps, dated changelog, release notes), and gives the human the
+tag commands. Publishing is always the human's action. After a release, retro runs.
 
 A failure in `verify` or `review` sends the task back to `implement` with the findings file
 as input, and increments **Review round** in the task. When `round > max_review_rounds`
@@ -33,6 +41,9 @@ It receives **pointers**, not summaries:
 | standards-reviewer | diff range, CODING_STANDARDS, GLOSSARY | implementer reasoning, other reviewers' findings |
 | adversary | spec, diff range, mutation survivors from the verifier | implementer reasoning, other reviewers' findings |
 | security-reviewer | diff range, threat notes in the design | implementer reasoning |
+| performance-reviewer | spec constraints (budgets), diff range, existing benchmarks | implementer reasoning, other reviewers' findings |
+| docs-writer | spec, task, diff range, existing docs and changelog | — |
+| release-manager | changelog, merged PRs since the last tag, implemented specs | — |
 
 A tool without sub-agents runs these as separate sessions, using
 `.agentic/prompts/<role>.md`. If a single session must play two roles, it says so in the

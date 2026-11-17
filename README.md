@@ -34,14 +34,20 @@ loop) can pick up exactly where the last one stopped.
  Verifier ──► runs the gate: format, lint, types, build, tests, coverage, mutation
    │   fail → Implementer (or Debugger)
    ▼
- Spec Reviewer │ Standards Reviewer │ Adversary │ Security Reviewer
+ Spec Reviewer │ Standards Reviewer │ Adversary │ Security Reviewer │ Performance Reviewer*
    (each in a fresh context, none sees the others' findings)
    │   findings → Implementer, max N rounds, then escalate to human
+   ▼
+ Docs Writer* ──► user-facing docs + Unreleased changelog entry, every example run
+   │
    ▼
  Integrator ──► commit + PR with evidence and merge-risk rating → CI gate → human merges
    │
    ▼
  Retro ──► turns recurring problems into new checks or standards
+
+ Release Manager ──► (on request) semver bump, dated changelog, release notes, tag for a human
+ * when the task needs it: a performance budget or hot path; a user-visible change
 ```
 
 Three rules hold the design together:
@@ -58,8 +64,8 @@ Three rules hold the design together:
 
 | Path | Contents |
 |---|---|
-| `agents/core/` | 13 role definitions (who does what, with which permissions) |
-| `agents/domains/` | Domain experts that plug in as consultants (aerospace, Unreal TA, plus a template) |
+| `agents/core/` | 16 role definitions (who does what, with which permissions) |
+| `agents/domains/` | Domain experts that plug in as consultants (aerospace, Unreal TA, accessibility, plus a template) |
 | `skills/` | Reusable procedures with completion criteria (how each job is done) |
 | `standards/` | Coding-standards packs (tool configs + review rules) you choose per project |
 | `workflow/` | Pipeline, tracks, definition of done, document templates |
@@ -273,7 +279,7 @@ agentic-dev-kit/
 ├── agents/
 │   ├── _schema.md             frontmatter + section contract for agent files
 │   ├── core/                  orchestrator … retro
-│   └── domains/               _template, aerospace-engineer, unreal-technical-artist
+│   └── domains/               _template, aerospace-engineer, unreal-technical-artist, accessibility-expert
 ├── skills/                    one folder per skill, each with SKILL.md
 ├── standards/                 coding-standards packs: pack.toml, standard.md, configs/, gates.toml
 ├── workflow/                  pipeline.md, tracks.md, definition-of-done.md, templates/
@@ -287,6 +293,10 @@ agentic-dev-kit/
 ├── project-skeleton/          AGENTS.md + .agentic/ state skeleton
 └── docs/
 ```
+
+## Roadmap
+
+Planned improvements and open verification items are tracked in [TODO.md](TODO.md).
 
 ## License
 

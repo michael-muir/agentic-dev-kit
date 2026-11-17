@@ -351,12 +351,20 @@ def role_writes(cfg: Config) -> dict[str, list[str]]:
     return roles
 
 
+def literal_prefix(pattern: str) -> str:
+    """The part of a glob before its first wildcard, e.g. '.agentic/locks/' for '.agentic/locks/**'."""
+    return re.split(r"[*?\[]", pattern, maxsplit=1)[0]
+
+
 def allowed(path: str, patterns: list[str]) -> bool:
     if matches(path, UNIVERSAL):
         return True
     explicit = [p for p in patterns if p != "**"]
-    if matches(path, PROTECTED):
-        return matches(path, explicit)
+    guards = [g for g in PROTECTED if matches(path, [g])]
+    if guards:
+        # A protected path is granted only by a pattern that names its protected location, so a
+        # broad grant like "docs/**" never reaches docs/CODEOWNERS.
+        return any(matches(path, [p]) and p.startswith(literal_prefix(g)) for p in explicit for g in guards)
     return "**" in patterns or matches(path, explicit)
 
 

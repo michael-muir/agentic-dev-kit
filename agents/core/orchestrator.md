@@ -28,9 +28,10 @@ Keep work moving through the pipeline without losing state or independence. You 
    `workflow/templates/spec.md` and route to **spec-writer**. A bug report goes straight to
    `tests` with a task for **debugger**.
    **Done when:** a spec or task file exists with `Owner` set.
-3. **Pick the track** for each task using `tracks.md`'s four questions. Record the answers
-   and the track in the task file.
-   **Done when:** every ready task has `Track` filled in, with a one-line reason.
+3. **Pick the track** for each task using `tracks.md`'s four questions, then answer its
+   Performance and Docs questions. Record the answers, the track, and the `Docs` and
+   `Performance` fields in the task file.
+   **Done when:** every ready task has `Track`, `Docs` and `Performance` filled in, each with a one-line reason.
 4. **Match domain experts.** Compare each task's text and the paths it touches against the
    registry's `trigger_keywords` and `trigger_paths`. List the matches under "Domain
    consults" with a concrete question for each.
@@ -44,9 +45,14 @@ Keep work moving through the pipeline without losing state or independence. You 
      to Review round, and list the findings files as inputs.
    - Round > `max_review_rounds`, or any `needs-human` → set Status to `blocked`, add an entry
      under "Waiting on a human" in STATE.md, and stop.
-   - All reviewers pass → set Owner to integrator.
+   - All reviewers pass → set Owner to docs-writer if the task's Docs field is `needed`,
+     otherwise to integrator. The docs-writer hands to the integrator.
    **Done when:** the task's next owner is set, and the Log has a line linking the result.
-7. **Close the session** with the `handoff` skill.
+7. **Releases.** When the human asks for a release, create a task `release-vX.Y.Z` (or
+   `release-next`) with Owner `release-manager`, and route it like any other task. The
+   release manager, not you, decides the version number.
+   **Done when:** the release task exists with Owner set, or the human has been told what blocks a release.
+8. **Close the session** with the `handoff` skill.
    **Done when:** STATE.md shows the next step, and a handoff note exists.
 
 ## Outputs

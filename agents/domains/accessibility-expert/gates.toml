@@ -1,0 +1,20 @@
+# Accessibility checks. Advisory by default: findings feed the reviewers and the adversary.
+# Make markup-basics blocking per project with
+# [gate.overrides] "accessibility-expert:markup-basics" = { advisory = false }
+
+[[step]]
+name = "markup-basics"
+category = "domain"
+cmd = "{python} {kit}/agents/domains/accessibility-expert/checks/markup_basics.py"
+stages = ["pre-push", "ci"]
+when_files = ["**/*.html", "**/*.htm", "**/*.jsx", "**/*.tsx", "**/*.vue", "**/*.svelte", "**/*.razor", "**/*.cshtml"]
+advisory = true
+
+# Rendered-page audit with axe rules through pa11y-ci. Runs when the project has a .pa11yci
+# config listing URLs (usually a local preview server started earlier in CI).
+[[step]]
+name = "pa11y"
+category = "domain"
+cmd = "npx --no-install pa11y-ci"
+stages = ["ci"]
+requires_paths = [".pa11yci", "node_modules/pa11y-ci"]
