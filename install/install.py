@@ -96,6 +96,31 @@ base_branch = "main"       # builtin:scope checks agent commits since the merge-
 # "python:test" = "pytest -q --cov=src --cov-fail-under=90"
 # "aerospace-engineer:unit-suffixes" = {{ advisory = false }}
 
+# Cost controls for headless runs (.agentic/kit/runner/run.py). Interactive sessions aren't
+# metered by the kit; use your tools' own limits for those.
+#   off     record nothing
+#   track   record time, tokens and cost per task (Spend row); never stop   <- default
+#   warn    also warn at warn_at of a limit, and when it's reached
+#   enforce also block the task for a human when a limit is reached
+# Leave a limit out (or set it to 0) to turn it off. A task's `Budget` row overrides these,
+# e.g. "| Budget | enforce, max_cost_usd=5 |" or "| Budget | off |". `run.py ... --ignore-budgets`
+# overrides them for one run, and is recorded in the ledger.
+[budgets]
+mode = "track"
+warn_at = 0.8
+# max_review_rounds = 3      # defaults to [workflow] max_review_rounds
+# max_steps = 15
+# max_minutes = 180
+# max_tokens = 5000000
+# max_cost_usd = 20.0
+# max_cost_usd_per_day = 50.0    # across all tasks, from this machine's ledger
+max_cost_usd_per_step = 5.0      # hard cap passed to engines that support one (Claude: --max-budget-usd)
+
+# $ per million tokens, for engines that report tokens but not cost. The engine's `model` picks
+# the row, e.g. [runner.engines] codex = {{ cmd = "...", model = "gpt-5" }}
+[budgets.prices]
+# "gpt-5" = {{ input = 1.25, output = 10.0 }}
+
 # Headless runner (.agentic/kit/runner/run.py). Map independent roles to a different engine.
 [runner]
 default = "claude"
@@ -104,7 +129,7 @@ timeout_minutes = 60
 # [runner.roles]
 # adversary = "codex"
 # [runner.engines]
-# codex = 'codex exec --sandbox workspace-write - < "{{prompt_file}}"'
+# codex = 'codex exec --json --sandbox workspace-write - < "{{prompt_file}}"'
 
 # Extend a role's write scope for this project's layout (humans only; this file is protected).
 # [roles.test-designer]

@@ -2,6 +2,7 @@
 """End-to-end smoke test for agentic-dev-kit. See docs/testing-the-kit.md."""
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import stat
@@ -165,6 +166,9 @@ def test_runner_and_extras() -> None:
     text = cfg.read_text("utf-8").replace('default = "claude"', 'default = "fake"')
     cfg.write_text(text + f"\n[runner.engines]\nfake = '{{python}} \"{fake}\" \"{{prompt_file}}\"'\n", "utf-8")
     (repo / ".agentic/tasks/01-demo.md").write_text(TASK, "utf-8")
+    # This throwaway repo has no stack tools, so the real hooks would fail every commit. The
+    # runner itself never skips hooks; only the harness does, here.
+    run("git", "config", "core.hooksPath", ".git/no-hooks", cwd=repo)
     commit(repo, "chore: install kit")
     run("git", "checkout", "-q", "-b", "task/01-demo", cwd=repo)
 
@@ -181,10 +185,84 @@ def test_runner_and_extras() -> None:
           f"loop ran each role in turn, then stopped ({', '.join(roles_run)})")
     check("Status | in-review" in (repo / ".agentic/tasks/01-demo.md").read_text("utf-8"), "task ends in review")
     trailers = run("git", "log", "--format=%(trailers:key=Agent-Role,valueonly)", cwd=repo).stdout.split()
-    check(trailers[:4] == ["integrator", "verifier", "implementer", "test-designer"], "each step committed with its trailer")
+    agents_only = [t for t in trailers if t != "runner"]
+    check(agents_only[:4] == ["integrator", "verifier", "implementer", "test-designer"], "each step committed with its trailer")
+    check(trailers.count("runner") == 4, "runner committed the Spend row after each step")
     run(sys.executable, ".agentic/kit/gates/gate.py", "run", "--stage", "ci", "--only", "builtin:scope", cwd=repo)
-    check(True, "runner commits pass the scope check")
+    check(True, "agent and runner commits pass the scope check")
     check(len((repo / ".agentic/runs/index.jsonl").read_text("utf-8").splitlines()) == 4, "runs recorded")
+    spend = (repo / ".agentic/tasks/01-demo.md").read_text("utf-8")
+    check("| Spend | steps=4 · " in spend and "tokens=6000 · cost_usd=6.00" in spend,
+          "default track mode records steps, tokens and cost in the Spend row")
+    test_budgets(repo, runner)
+
+
+def add_task(repo: Path, name: str, budget: str = "", review_round: str = "0 / 3") -> None:
+    text = TASK.replace("# T-01: demo", f"# {name}").replace(
+        "| Blocked by | none |", f"| Blocked by | none |\n| Review round | {review_round} |"
+        + (f"\n| Budget | {budget} |" if budget else ""))
+    (repo / f".agentic/tasks/{name}.md").write_text(text, "utf-8")
+    commit(repo, f"chore: add {name}")
+
+
+def test_budgets(repo: Path, runner: tuple) -> None:
+    print("cost controls")
+    loop = (sys.executable, *runner, "loop", "--max-steps", "6", "--task")
+
+    add_task(repo, "02-enforce", "enforce, max_cost_usd=2")
+    proc = run(*loop, "02", cwd=repo, expect=4)
+    check(len(re.findall(r"runner: \S+ on", proc.stdout)) == 2, "enforce: two $1.50 steps run, the third is stopped")
+    task = (repo / ".agentic/tasks/02-enforce.md").read_text("utf-8")
+    check("| Status | blocked |" in task and "budget reached" in task, "enforce: task blocked with the reason logged")
+    check("02-enforce.md: budget reached" in (repo / ".agentic/STATE.md").read_text("utf-8"),
+          "enforce: STATE.md lists it under Waiting on a human")
+    (repo / ".agentic/tasks/02-enforce.md").write_text(task.replace("| Status | blocked |", "| Status | ready |"), "utf-8")
+    commit(repo, "chore: human unblocks 02")
+    run(sys.executable, *runner, "next", "--task", "02", cwd=repo, expect=4)
+    check(True, "enforce: unblocking alone isn't enough; it re-blocks until the limit changes")
+    task = (repo / ".agentic/tasks/02-enforce.md").read_text("utf-8")
+    (repo / ".agentic/tasks/02-enforce.md").write_text(task.replace("| Status | blocked |", "| Status | ready |"), "utf-8")
+    commit(repo, "chore: human unblocks 02 again")
+    proc = run(sys.executable, *runner, "next", "--task", "02", "--ignore-budgets", cwd=repo)
+    check("continuing because of --ignore-budgets" in proc.stdout, "--ignore-budgets runs one step past the limit")
+    last = json.loads((repo / ".agentic/runs/index.jsonl").read_text("utf-8").splitlines()[-1])
+    check(last.get("budgets_ignored") is True, "--ignore-budgets is recorded in the ledger")
+
+    add_task(repo, "03-warn", "warn, max_steps=1")
+    proc = run(*loop, "03", cwd=repo)
+    check("mode=warn, continuing" in proc.stdout and len(re.findall(r"runner: \S+ on", proc.stdout)) == 4,
+          "warn: reports the limit but keeps going")
+
+    add_task(repo, "04-off", "off")
+    run(sys.executable, *runner, "next", "--task", "04", cwd=repo)
+    check("| Spend |" not in (repo / ".agentic/tasks/04-off.md").read_text("utf-8"), "off: nothing recorded on the task")
+
+    add_task(repo, "05-rounds", "enforce", review_round="4 / 3")
+    proc = run(sys.executable, *runner, "next", "--task", "05", cwd=repo, expect=4)
+    check("review_rounds 4 reached limit 3" in proc.stdout, "enforce: review-round limit stops the task")
+
+    cfg = repo / ".agentic/config.toml"
+    cfg.write_text(cfg.read_text("utf-8").replace('mode = "track"', 'mode = "enforce"\nmax_cost_usd_per_day = 1.0'), "utf-8")
+    add_task(repo, "06-daily")
+    proc = run(sys.executable, *runner, "next", "--task", "06", cwd=repo, expect=4)
+    check("reached the daily limit" in proc.stdout, "enforce: the project-wide daily cost limit stops new steps")
+
+    costs = run(sys.executable, *runner, "costs", cwd=repo).stdout
+    check("by task:" in costs and "by role:" in costs and "past a budget with --ignore-budgets" in costs,
+          "costs summarises by task and role, and flags overrides")
+
+    sys.path.insert(0, str(KIT / "runner"))
+    import run as runner_mod  # noqa: E402
+    codex_log = "\n".join([
+        '{"type":"thread.started"}',
+        '{"type":"turn.completed","usage":{"input_tokens":800,"cached_input_tokens":0,"output_tokens":200}}',
+        '{"type":"turn.completed","usage":{"input_tokens":700,"cached_input_tokens":0,"output_tokens":300}}',
+    ])
+    usage = runner_mod.parse_usage(codex_log)
+    cost = runner_mod.price_cost(usage, {"model": "m"}, {"m": {"input": 1.0, "output": 10.0}})
+    check(usage.tokens_in == 1500 and usage.tokens_out == 500 and usage.cost_usd is None and cost == 0.0065,
+          "Codex-style events are summed, and priced from [budgets.prices]")
+    check(not runner_mod.parse_usage("plain text output\n").measured, "engines without usage are marked unmeasured")
 
 
 def commit(repo: Path, message: str) -> None:

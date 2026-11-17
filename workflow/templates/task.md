@@ -12,6 +12,8 @@
 | Blocked by | none \| T-03, T-04 |
 | Branch | task/NN-slug |
 | Review round | 0 / 3 |
+| Budget | project default \| off \| track \| warn \| enforce, max_cost_usd=5, max_steps=8 … |
+| Spend | (maintained by the runner) |
 
 ## Behaviour to deliver
 <One vertical slice, described end to end from the user's point of view. Avoid file paths

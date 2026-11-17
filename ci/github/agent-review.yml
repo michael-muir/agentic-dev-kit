@@ -17,9 +17,15 @@ permissions:
   issues: write
   id-token: write
 
+# Cost control: a new push to the same PR cancels the review still running for the old one.
+concurrency:
+  group: agent-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   review:
     if: github.event.pull_request.draft == false
+    timeout-minutes: 30          # cost control: hard stop for a runaway review
     strategy:
       fail-fast: false
       matrix:
@@ -34,7 +40,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: "--max-turns 40"
+          # Cost control: a hard dollar cap per review (Claude Code --max-budget-usd).
+          claude_args: "--max-budget-usd 3"
           prompt: |
             You are the ${{ matrix.role }} of this repository's agentic-dev-kit workflow, running in CI.
             1. Read .agentic/kit/agents/core/${{ matrix.role }}.md and every skill it lists under

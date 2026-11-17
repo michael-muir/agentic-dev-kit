@@ -25,3 +25,5 @@ subprocess.run(["git", "add", "-A"], check=True)
 subprocess.run(["git", "-c", "user.email=fake@example.invalid", "-c", "user.name=fake", "commit", "-q",
                 "--no-verify", "-m", f"chore(agentic): {role} step\n\nAgent-Role: {role}"], check=True)
 print(f"fake agent: {role} done")
+# Report usage the way Claude Code's `-p --output-format json` does.
+print('{"type": "result", "total_cost_usd": 1.5, "usage": {"input_tokens": 1000, "output_tokens": 500}}')

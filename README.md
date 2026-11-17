@@ -188,7 +188,12 @@ instructions, and paths in `[safety] no_read` stay unread. Headless runs belong 
 
 `.agentic/kit/runner/run.py loop` runs the pipeline without a human starting each role. Each
 role runs in a fresh process, on the engine you map it to, so the adversary can run on a
-different vendor's model from the implementer. The loop stops at every human checkpoint. See
+different vendor's model from the implementer. The loop stops at every human checkpoint.
+
+**Cost controls** (`[budgets]` in `config.toml`): `off`, `track` (the default: record time,
+tokens and cost per task), `warn`, or `enforce` (block the task for a human at a limit on
+review rounds, steps, minutes, tokens, cost per task, or cost per day). Tasks can override
+the setting, and `--ignore-budgets` overrides it for a single run. See
 [runner/README.md](runner/README.md).
 
 ## Tracks

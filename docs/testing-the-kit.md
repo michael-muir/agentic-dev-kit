@@ -32,6 +32,11 @@ python docs/smoke_test.py
    trailer and passes the scope check. `plan` warns when independent roles share an engine.
    The optional files are generated: dependabot, review workflow, devcontainer, `.prettierignore`.
 
+9. Cost controls: the default `track` mode records a Spend row. `enforce` blocks a task at
+   its cost limit, at the review-round limit, and at the daily limit. `warn` continues.
+   `off` records nothing. `--ignore-budgets` runs once and is recorded. Codex-style usage
+   events are summed and priced.
+
 It prints `SMOKE OK` and exits 0 on success.
 
 ## Fixtures: the real tools

@@ -346,6 +346,9 @@ def role_writes(cfg: Config) -> dict[str, list[str]]:
         if f.exists():
             meta = parse_doc(f).meta
             roles[meta["id"]] = list(meta.get("writes", []))
+    # The headless runner commits only the shared state it maintains (Spend rows, budget blocks),
+    # which UNIVERSAL already covers.
+    roles.setdefault("runner", [])
     for rid, extra in cfg.roles.items():
         roles.setdefault(rid, []).extend(extra.get("writes", []))
     return roles

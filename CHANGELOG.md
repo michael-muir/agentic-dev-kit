@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0 — 2026-11-16
+
+- Cost controls for headless runs (`[budgets]`): modes off | track (default) | warn | enforce;
+  limits on review rounds, steps, minutes, tokens, cost per task and cost per day, each
+  optional; a per-task `Budget` row; `--ignore-budgets` for one run (recorded).
+- Runner: captures usage (Claude Code `--output-format json`, Codex `--json`, and a price
+  table for token-only engines); keeps a committed `Spend` row per task; blocks tasks at
+  enforced limits with an entry in STATE.md; new `run.py costs` report. Per-step hard cap via
+  Claude Code `--max-budget-usd`.
+- CI review workflow: `--max-budget-usd` replaces `--max-turns` (not a flag in current
+  Claude Code), plus a 30-minute timeout and cancel-on-new-push concurrency.
+- Scope check knows the `runner` role (shared state only).
+
 ## 0.4.0 — 2026-11-16
 
 - New core roles: **docs-writer** (user-facing docs and Unreleased changelog entries, with

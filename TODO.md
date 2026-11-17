@@ -23,8 +23,6 @@ in `CHANGELOG.md`. Move an item to **Done** rather than deleting it.
   silently retried until it passes.
 - [ ] **AI provenance.** Mark AI-authored commits with a trailer (beyond `Agent-Role`, e.g.
   `Agent-Model`), for organisations that need it for audit or licensing.
-- [ ] **Cost control.** Limits per task on review rounds, time or tokens, recorded in the
-  task file and enforced by the runner.
 
 ## Still to verify from 0.3.0
 
@@ -36,8 +34,12 @@ in `CHANGELOG.md`. Move an item to **Done** rather than deleting it.
   claude-code-action v1.
 - [ ] Runner end to end with real `claude` and `codex` sessions, not the scripted fake engine.
 - [ ] Devcontainer builds and runs the gate. Consider adding a network allow-list.
+- [ ] Cost capture against real engines: Claude Code's JSON result fields, and Codex's
+  `turn.completed` usage events. So far only checked with the scripted fake engine and samples.
 
 ## Done
 
 - [x] **More roles** (0.4.0). Docs writer, performance reviewer and release manager as core
   roles, plus an accessibility domain expert.
+- [x] **Cost control** (0.5.0). `[budgets]` modes off/track/warn/enforce, per-task overrides,
+  `--ignore-budgets`, a Spend row per task, and `run.py costs`.
