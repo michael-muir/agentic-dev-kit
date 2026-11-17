@@ -329,6 +329,9 @@ def fresh_repo(name: str) -> Path:
     path = WORK.parent / name
     path.mkdir(parents=True)
     run("git", "init", "-q", cwd=path)
+    # CI runners have no global git identity; the runner's own commits need one.
+    run("git", "config", "user.email", "smoke@example.invalid", cwd=path)
+    run("git", "config", "user.name", "smoke", cwd=path)
     return path
 
 

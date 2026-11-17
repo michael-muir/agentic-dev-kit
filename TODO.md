@@ -26,10 +26,13 @@ in `CHANGELOG.md`. Move an item to **Done** rather than deleting it.
 
 ## Still to verify from 0.3.0
 
-- [ ] Push and confirm `kit-ci` passes on GitHub: the workflow syntax, the pinned action
-  versions, and the smoke test on Windows and Linux.
-- [ ] Go, C++ and Lua fixtures pass in CI. They haven't run anywhere yet, and C++ is the
-  most likely to need tweaks.
+- [x] `kit-ci` runs on GitHub: the workflow syntax and pinned actions work, and the smoke
+  test passed on Windows and Linux (run #2).
+- [x] Go and Lua fixtures pass in CI, with no pack and every pack.
+- [ ] `cpp-google` fixture passes in CI after the header-guard naming fix. The other two C++
+  variants already pass.
+- [ ] Smoke test passes in CI again after the git-identity fix for runner commits. It failed
+  in run #3; the fix was reproduced and verified locally with an empty global git config.
 - [ ] `agent-review.yml` runs with a real `ANTHROPIC_API_KEY`, and the action inputs match
   claude-code-action v1.
 - [ ] Runner end to end with real `claude` and `codex` sessions, not the scripted fake engine.
