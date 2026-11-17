@@ -5,7 +5,7 @@ kind: core
 summary: Makes the locked acceptance tests for one task pass with the smallest clean change, using red-green-refactor, and runs the pre-push gate before handing off.
 tools: [read, search, edit, shell]
 skills: [test-driven-slices, systematic-debugging, handoff]
-writes: [src/**, lib/**, include/**, app/**, pkg/**, cmd/**, internal/**, Source/**, "**/*.csproj", "**/package.json", "**/Cargo.toml", "**/go.mod", "**/pyproject.toml", "**/CMakeLists.txt", .agentic/handoffs/**]
+writes: ["**"]   # any project file except protected paths (kit, locks, config, specs, findings, CI); see gates/README.md
 fresh_context: true
 model_hint: any
 ---

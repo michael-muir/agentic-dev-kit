@@ -1,0 +1,1 @@
+format = ["ruff format --extend-exclude .agentic ."]

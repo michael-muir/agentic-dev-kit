@@ -1,5 +1,9 @@
 # agentic-dev-kit: runs the same gate as the local hooks, at the ci stage.
-# Make "agent-gate" a required status check under branch protection for main.
+# Make "agent-gate / gate" (and, on PRs, "agent-gate / dependencies") required status checks
+# under branch protection for main.
+#
+# Every action is pinned to a full commit SHA (the tag is in the comment). Dependabot
+# (.github/dependabot.yml) proposes updates. Review them like any other dependency change.
 name: agent-gate
 
 on:
@@ -14,12 +18,13 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           lfs: false
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
 
@@ -37,7 +42,7 @@ jobs:
 
       - name: Node
         if: contains(steps.stacks.outputs.list, ',javascript,') || contains(steps.stacks.outputs.list, ',typescript,')
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
       - name: Node dependencies
@@ -46,16 +51,16 @@ jobs:
 
       - name: .NET
         if: contains(steps.stacks.outputs.list, ',dotnet,')
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: "10.0.x"
       - name: .NET restore
         if: contains(steps.stacks.outputs.list, ',dotnet,')
         run: dotnet restore
 
       - name: Go
         if: contains(steps.stacks.outputs.list, ',go,')
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: stable
       - name: Go tools
@@ -67,8 +72,9 @@ jobs:
 
       - name: Rust
         if: contains(steps.stacks.outputs.list, ',rust,')
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master (2026-11)
         with:
+          toolchain: stable
           components: rustfmt, clippy
       - name: Rust tools
         if: contains(steps.stacks.outputs.list, ',rust,')
@@ -80,30 +86,57 @@ jobs:
 
       - name: Lua
         if: contains(steps.stacks.outputs.list, ',lua,')
-        uses: leafo/gh-actions-lua@v10
+        uses: leafo/gh-actions-lua@32909a2dea0a48c433aec79e7fcd31b4cd55800f # v13.1.0
+        with:
+          luaVersion: "5.4"
       - name: LuaRocks
         if: contains(steps.stacks.outputs.list, ',lua,')
-        uses: leafo/gh-actions-luarocks@v4
+        uses: leafo/gh-actions-luarocks@1c4a92caecc8f6850f673cbadfd57b3e555417ce # v6.1.1
       - name: Lua tools
         if: contains(steps.stacks.outputs.list, ',lua,')
         run: |
           luarocks install busted
           luarocks install luacheck
           luarocks install luacov
-          curl -sSL -o stylua.zip https://github.com/JohnnyMorganz/StyLua/releases/latest/download/stylua-linux-x86_64.zip
-          unzip -o stylua.zip -d "$HOME/.local/bin" && chmod +x "$HOME/.local/bin/stylua"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          cargo install stylua --locked --version 2.6.0
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
-      - name: Gitleaks
+      - name: Gitleaks (checksum-verified)
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
         run: |
-          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar -xz -C /usr/local/bin gitleaks
+          f="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSLo "$f" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$f"
+          echo "${GITLEAKS_SHA256}  $f" | sha256sum --check --strict
+          sudo tar -xzf "$f" -C /usr/local/bin gitleaks
 
       - name: Gate
         run: python .agentic/kit/gates/gate.py run --stage ci
 
       - name: Upload gate report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gate-report
           path: .agentic/reports/
+
+  dependencies:
+    # New or changed dependencies in a PR: fail on known vulnerabilities (moderate and up) and
+    # on licences outside the allow-list. Needs the dependency graph (on by default for public
+    # repos; Settings → Security for private repos).
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          # Permissive licences. Add any your organisation has approved; anything else fails.
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Unlicense, Zlib, MPL-2.0, BSL-1.0, CC0-1.0, Python-2.0, PSF-2.0
+          comment-summary-in-pr: on-failure

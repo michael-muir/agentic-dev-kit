@@ -165,6 +165,8 @@ class Config:
     skip: list[str]
     overrides: dict
     steps: list[Step]
+    roles: dict = field(default_factory=dict)
+    base_branch: str = "main"
 
 
 def load_config(root: Path) -> Config:
@@ -218,7 +220,8 @@ def load_config(root: Path) -> Config:
                 if k in Step.__dataclass_fields__ and k not in ("id", "builtin", "replaces"):
                     setattr(st, k, v)
     return Config(root, stacks, domains, sorted(set(test_globs)), list(gate_cfg.get("skip", [])),
-                  overrides, steps)
+                  overrides, steps, roles=data.get("roles", {}),
+                  base_branch=gate_cfg.get("base_branch", "main"))
 
 
 # --------------------------------------------------------------------------- built-in checks
@@ -321,6 +324,82 @@ def check_trace(cfg: Config, files: list[str]) -> tuple[bool, str]:
     return True, f"{len(ids)} acceptance criteria traced to tests"
 
 
+# Paths that decide what "passing" means, or record verdicts. A role may change them only when
+# its writes list names them explicitly. A catch-all "**" doesn't count.
+PROTECTED = [
+    ".agentic/kit/**", ".agentic/locks/**", ".agentic/config.toml", ".agentic/CODING_STANDARDS.md",
+    ".agentic/GLOSSARY.md", ".agentic/specs/**", ".agentic/decisions/**", ".agentic/findings/**",
+    ".github/workflows/**", ".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS",
+    ".github/dependabot.yml", ".claude/settings.json", ".devcontainer/**",
+]
+# Every role keeps the shared state current (the handoff skill requires it).
+UNIVERSAL = [".agentic/STATE.md", ".agentic/tasks/**", ".agentic/handoffs/**"]
+
+
+def role_writes(cfg: Config) -> dict[str, list[str]]:
+    sys.path.insert(0, str(KIT / "adapters"))
+    from build import parse_doc  # noqa: E402  (kit-local module)
+    files = sorted((KIT / "agents" / "core").glob("*.md"))
+    files += [KIT / "agents" / "domains" / d / "agent.md" for d in cfg.domains]
+    roles = {}
+    for f in files:
+        if f.exists():
+            meta = parse_doc(f).meta
+            roles[meta["id"]] = list(meta.get("writes", []))
+    for rid, extra in cfg.roles.items():
+        roles.setdefault(rid, []).extend(extra.get("writes", []))
+    return roles
+
+
+def allowed(path: str, patterns: list[str]) -> bool:
+    if matches(path, UNIVERSAL):
+        return True
+    explicit = [p for p in patterns if p != "**"]
+    if matches(path, PROTECTED):
+        return matches(path, explicit)
+    return "**" in patterns or matches(path, explicit)
+
+
+def scope_base(cfg: Config) -> str:
+    candidates = [os.environ.get("AGENTIC_BASE", "")]
+    if os.environ.get("GITHUB_BASE_REF"):
+        candidates.append(f"origin/{os.environ['GITHUB_BASE_REF']}")
+    branch = cfg.base_branch
+    candidates += [f"origin/{branch}", branch]
+    for ref in filter(None, candidates):
+        base = git(cfg.root, "merge-base", "HEAD", ref)
+        if base:
+            return base
+    return ""
+
+
+def check_scope(cfg: Config, files: list[str]) -> tuple[bool, str]:
+    base = scope_base(cfg)
+    if not base:
+        return True, f"no merge-base with '{cfg.base_branch}'; scope not checked"
+    roles = role_writes(cfg)
+    shas = git(cfg.root, "rev-list", "--no-merges", f"{base}..HEAD").split()
+    problems, checked = [], 0
+    for sha in shas:
+        role = git(cfg.root, "log", "-1", "--format=%(trailers:key=Agent-Role,valueonly)", sha).strip()
+        role = role.splitlines()[0].strip() if role else ""
+        if not role:
+            continue  # a human commit; humans are governed by CODEOWNERS and review
+        checked += 1
+        if role not in roles:
+            problems.append(f"{sha[:10]}: unknown Agent-Role '{role}'")
+            continue
+        changed = git(cfg.root, "diff-tree", "--no-commit-id", "--name-only", "-r", sha).splitlines()
+        for path in changed:
+            if not allowed(path, roles[role]):
+                problems.append(f"{sha[:10]} ({role}): {path} is outside this role's writes")
+    if problems:
+        return False, "\n".join(problems) + (
+            "\nMove the change to the role that owns it, or (humans only) extend the role in "
+            ".agentic/config.toml [roles.<id>] writes.")
+    return True, f"{checked} agent commit(s) since {base[:10]} within their role scopes"
+
+
 def builtin_steps() -> list[Step]:
     return [
         Step(id="builtin:secrets", name="secrets", category="security", builtin=check_secrets),
@@ -328,6 +407,8 @@ def builtin_steps() -> list[Step]:
         Step(id="builtin:test-lock", name="test-lock", category="integrity", builtin=check_test_lock),
         Step(id="builtin:trace", name="trace", category="integrity", stages=["pre-push", "ci"],
              builtin=check_trace),
+        Step(id="builtin:scope", name="scope", category="integrity", stages=["pre-push", "ci"],
+             builtin=check_scope),
     ]
 
 

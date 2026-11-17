@@ -24,4 +24,25 @@ python docs/smoke_test.py
    `--update` keeps Project rules, a pack step `replaces` its profile step, and conflicting
    packs, or packs for unselected stacks, are rejected.
 
+7. Role scopes: an implementer commit touching a lock file fails `builtin:scope`, a
+   test-designer's passes, unknown roles fail, and human commits are left alone. Claude deny
+   rules and CODEOWNERS are generated.
+8. Runner: with a scripted fake engine (`docs/fake_agent.py`), `loop` runs test-designer →
+   implementer → verifier → integrator, then stops at review. Every step commits with its
+   trailer and passes the scope check. `plan` warns when independent roles share an engine.
+   The optional files are generated: dependabot, review workflow, devcontainer, `.prettierignore`.
+
 It prints `SMOKE OK` and exits 0 on success.
+
+## Fixtures: the real tools
+
+`fixtures/<stack>/` holds a tiny sample project per stack. `fixture_test.py` installs the
+kit into a copy, with no pack or a chosen pack, and runs `gate.py run --stage ci` with the
+real tools:
+
+```bash
+python fixtures/fixture_test.py --stack dotnet --standards dotnet-stylecop
+```
+
+The kit's CI (`.github/workflows/kit-ci.yml`) runs every stack × pack combination on Linux,
+and the smoke test on Windows and Linux.

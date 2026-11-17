@@ -11,5 +11,6 @@ agents changing the kit. The instructions installed into projects are
 - `gates/gate.py`, `adapters/build.py` and `install/install.py` use only the Python 3.11+
   standard library. Keep it that way, so the kit runs wherever Python does.
 - After changing scripts, run the smoke test in `docs/testing-the-kit.md` and include its
-  result in the PR.
+  result in the PR. After changing a gate profile or standards pack, also run its fixture
+  (`python fixtures/fixture_test.py --stack <stack> --standards <pack>`).
 - Bump `VERSION` and add a `CHANGELOG.md` entry with every change that alters installed files.

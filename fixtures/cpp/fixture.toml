@@ -1,0 +1,1 @@
+format = ["clang-format -i src/demo.cpp include/demo/demo.hpp tests/demo_test.cpp"]

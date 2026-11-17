@@ -132,6 +132,7 @@ dotnet_diagnostic.CA1848.severity = suggestion        # LoggerMessage delegates 
 
 [{tests,test}/**.cs]
 dotnet_diagnostic.CA1707.severity = none              # underscores allowed in test names
+dotnet_diagnostic.IDE1006.severity = none             # e.g. DEMO_AC_1_AddsTwoNumbers
 
 # ---- StyleCop.Analyzers: aligned with the Microsoft conventions above
 [*.cs]

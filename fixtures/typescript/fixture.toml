@@ -1,0 +1,2 @@
+setup = ["npm ci"]
+format = ["npx --no-install prettier --write ."]

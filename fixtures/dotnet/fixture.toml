@@ -1,0 +1,2 @@
+setup = ["dotnet restore"]
+format = ["dotnet format"]

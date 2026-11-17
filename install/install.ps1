@@ -14,9 +14,12 @@ param(
     [string[]]$Domains,
     [string[]]$Standards,
     [string[]]$Tools,
+    [string[]]$Owners,
     [switch]$Update,
     [switch]$NoHooks,
-    [switch]$NoCi
+    [switch]$NoCi,
+    [switch]$CiReview,
+    [switch]$Devcontainer
 )
 $ErrorActionPreference = 'Stop'
 $installer = Join-Path $PSScriptRoot 'install.py'
@@ -36,9 +39,12 @@ if ($Stacks)  { $argv += @('--stacks',  ($Stacks -join ',')) }
 if ($Domains) { $argv += @('--domains', ($Domains -join ',')) }
 if ($Standards) { $argv += @('--standards', ($Standards -join ',')) }
 if ($Tools)   { $argv += @('--tools',   ($Tools -join ',')) }
+if ($Owners)  { $argv += @('--owners',  ($Owners -join ',')) }
 if ($Update)  { $argv += '--update' }
 if ($NoHooks) { $argv += '--no-hooks' }
 if ($NoCi)    { $argv += '--no-ci' }
+if ($CiReview) { $argv += '--ci-review' }
+if ($Devcontainer) { $argv += '--devcontainer' }
 
 & $py @pre $installer @argv
 exit $LASTEXITCODE

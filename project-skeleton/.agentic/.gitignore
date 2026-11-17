@@ -1,2 +1,4 @@
 # Gate reports are regenerated on every run; CI uploads them as artifacts.
 reports/
+# Runner prompts and transcripts (may contain sensitive context).
+runs/

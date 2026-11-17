@@ -12,8 +12,11 @@ they can start without asking you anything.
 
 1. **Commit or describe your changes.** Commit finished work on the task branch. For
    unfinished work, either commit it with `wip:` or leave it uncommitted and say exactly
-   which files are half-done.
-   **Done when:** `git status` matches what the note will say.
+   which files are half-done. End every commit message with the trailer
+   `Agent-Role: <your role id>` (and `Agent-Model: <model>` if you know it), on its own line
+   after a blank line. The gate's `builtin:scope` check uses it to confirm that each role
+   changed only what it may.
+   **Done when:** `git status` matches what the note will say, and each of your commits has the trailer.
 
 2. **Write the note** at `.agentic/handoffs/YYYY-MM-DD-HHMM-<role>-<task-slug>.md` (use the
    local time, 24-hour clock), following `.agentic/kit/workflow/templates/handoff.md`.

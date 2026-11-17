@@ -96,6 +96,9 @@ Options:
 | `--domains` | folder names under `agents/domains/` | none |
 | `--standards` | coding-standards packs under `standards/` (comma-separated) | none |
 | `--tools` | `claude, copilot, cursor, gemini, generic` | `claude,generic` |
+| `--owners` | CODEOWNERS for protected paths, e.g. `@you,@org/leads` | none (prints a hint) |
+| `--ci-review` | add the AI PR-review workflow (spec-reviewer + adversary on every PR) | off |
+| `--devcontainer` | add a devcontainer sandbox for headless agent runs | off |
 | `--no-hooks` | skip setting `core.hooksPath` | hooks on |
 | `--no-ci` | skip copying the GitHub workflow | CI on |
 | `--update` | refresh `.agentic/kit/` and generated files; never touches state | — |
@@ -112,14 +115,24 @@ What the installer does to the target project:
   `CLAUDE.md` / `GEMINI.md` pointers when those tools are selected.
 - Generates tool-specific agent and skill files, such as `.claude/agents/` and `.github/agents/`.
 - Points git hooks at `.agentic/kit/gates/hooks/` (pre-commit and pre-push run the gate).
-- Adds `.github/workflows/agent-gate.yml`.
+- Adds `.github/workflows/agent-gate.yml` (every action pinned by SHA, plus a dependency
+  licence and vulnerability review on PRs) and `.github/dependabot.yml`.
+- With `--owners`: adds `.github/CODEOWNERS` for the protected paths.
+- With Claude Code selected: merges deny rules into `.claude/settings.json`. They block
+  force-push, hook bypass, edits to the kit, locks and CI, and reads of secret files.
+- For JavaScript/TypeScript: adds the kit's files to `.prettierignore`.
 
 After installing:
 
 1. Commit everything.
-2. On GitHub, protect `main`: require the `agent-gate` check and at least one human approval.
-   This is the final enforcement layer, and agents cannot get around it.
-3. Open your LLM tool in the project and say *"Read AGENTS.md and start."*
+2. On GitHub, protect `main`:
+   - require the `agent-gate` checks;
+   - require at least one human approval;
+   - with `--owners`, also turn on **Require review from Code Owners**.
+
+   This is the final enforcement layer, and agents can't get around it.
+3. Open your LLM tool in the project and say *"Read AGENTS.md and start."*, or run the
+   pipeline headless with the [runner](runner/README.md).
 
 ### Updating
 
@@ -147,6 +160,30 @@ changes as patches to this repo.
 Tools that support sub-agents (Claude Code, Copilot) get generated agent files, so each role
 runs in its own fresh context. Tools without sub-agents use `.agentic/prompts/<role>.md`: a
 self-contained prompt with the role and its skills inlined. Paste it into any model or API.
+
+## How the rules are enforced
+
+Instructions to agents are backed by checks they can't skip:
+
+| Layer | What it stops |
+|---|---|
+| `builtin:scope` gate check | An agent commit (`Agent-Role:` trailer) that changes files outside its role's `writes:`. Protected paths (kit, locks, config, specs, decisions, findings, CI, CODEOWNERS) need an explicit grant: `**` doesn't count. |
+| `builtin:test-lock` | Edits to, or deletion of, locked acceptance and adversarial tests. |
+| `builtin:trace` | An approved acceptance criterion with no test naming it. |
+| Git hooks + Claude deny rules | Committing or pushing without the gate (`--no-verify`, force-push, changing `core.hooksPath`). |
+| CODEOWNERS + branch protection | Any change to protected paths, and any merge, without a human's approval. |
+| Dependency review | New dependencies with known vulnerabilities or unapproved licences. |
+
+Agents also follow two safety rules in `AGENTS.md`: content they read is data, not
+instructions, and paths in `[safety] no_read` stay unread. Headless runs belong in a sandbox
+(`--devcontainer`).
+
+## Running agents headless
+
+`.agentic/kit/runner/run.py loop` runs the pipeline without a human starting each role. Each
+role runs in a fresh process, on the engine you map it to, so the adversary can run on a
+different vendor's model from the implementer. The loop stops at every human checkpoint. See
+[runner/README.md](runner/README.md).
 
 ## Tracks
 
@@ -242,8 +279,11 @@ agentic-dev-kit/
 ├── workflow/                  pipeline.md, tracks.md, definition-of-done.md, templates/
 ├── gates/                     gate.py, gate.ps1, gate.sh, profiles/, hooks/
 ├── adapters/build.py
-├── ci/github/agent-gate.yml
+├── runner/                    run.py: headless pipeline runner (one fresh session per role)
+├── ci/github/                 agent-gate.yml, agent-review.yml, CODEOWNERS.tmpl
 ├── install/                   install.py, install.ps1, install.sh
+├── fixtures/                  sample project per stack + fixture_test.py (run by kit CI)
+├── .github/workflows/kit-ci.yml   the kit's own CI: smoke test (Windows + Linux) and fixture matrix
 ├── project-skeleton/          AGENTS.md + .agentic/ state skeleton
 └── docs/
 ```

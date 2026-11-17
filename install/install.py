@@ -30,7 +30,7 @@ except ModuleNotFoundError:  # pragma: no cover
     sys.exit("install.py needs Python 3.11 or newer.")
 
 KIT = Path(__file__).resolve().parents[1]
-KIT_PARTS = ("agents", "skills", "standards", "workflow", "gates", "adapters", "ci", "VERSION",
+KIT_PARTS = ("agents", "skills", "standards", "workflow", "gates", "adapters", "runner", "ci", "VERSION",
              "CHANGELOG.md", "LICENSE")
 STACKS = ("python", "lua", "cpp", "dotnet", "javascript", "typescript", "rust", "go")
 TOOLS = ("claude", "copilot", "cursor", "gemini", "generic")
@@ -83,12 +83,32 @@ default_track = "auto"     # auto | lite | full  (see .agentic/kit/workflow/trac
 [tests]
 globs = []                 # extra test globs on top of each stack profile's test_globs
 
+[safety]
+# Paths agents must not read (secrets, credentials, personal data). Mirrored into Claude Code
+# deny rules; other tools get it through AGENTS.md.
+no_read = [".env", ".env.*", "**/secrets/**", "**/*.pem", "**/*.key", "**/*.pfx"]
+
 [gate]
 skip = []                  # step ids to skip, e.g. ["python:types"]. Comment why.
+base_branch = "main"       # builtin:scope checks agent commits since the merge-base with this branch
 
 [gate.overrides]
 # "python:test" = "pytest -q --cov=src --cov-fail-under=90"
 # "aerospace-engineer:unit-suffixes" = {{ advisory = false }}
+
+# Headless runner (.agentic/kit/runner/run.py). Map independent roles to a different engine.
+[runner]
+default = "claude"
+max_steps = 10
+timeout_minutes = 60
+# [runner.roles]
+# adversary = "codex"
+# [runner.engines]
+# codex = 'codex exec --sandbox workspace-write - < "{{prompt_file}}"'
+
+# Extend a role's write scope for this project's layout (humans only; this file is protected).
+# [roles.test-designer]
+# writes = ["MyApp.Specs/**"]
 """
 
 
@@ -295,6 +315,151 @@ def copy_pack_configs(target: Path, standards: list[str]) -> None:
                     f".agentic/kit/standards/{sid}/configs/{rel.as_posix()}")
 
 
+def write_codeowners(target: Path, owners: list[str]) -> None:
+    dst = target / ".github" / "CODEOWNERS"
+    if dst.exists() or (target / "CODEOWNERS").exists() or (target / "docs" / "CODEOWNERS").exists():
+        say("CODEOWNERS exists. Kept (compare with .agentic/kit/ci/github/CODEOWNERS.tmpl)")
+        return
+    if not owners:
+        say("No --owners given: CODEOWNERS skipped. Add it later to make protected paths need a "
+            "human's approval (see .agentic/kit/ci/github/CODEOWNERS.tmpl).")
+        return
+    bad = [o for o in owners if not o.startswith("@") and "@" not in o]
+    if bad:
+        say(f"CODEOWNERS skipped: owners must be @user, @org/team or an email ({', '.join(bad)})")
+        return
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmpl = (KIT / "ci" / "github" / "CODEOWNERS.tmpl").read_text("utf-8")
+    dst.write_text(tmpl.replace("{owners}", " ".join(owners)), "utf-8", newline="\n")
+    say(f".github/CODEOWNERS added ({' '.join(owners)})")
+
+
+def claude_deny_rules(no_read: list[str]) -> list[str]:
+    rules = [
+        "Bash(git push --force:*)", "Bash(git push -f:*)", "Bash(git push --force-with-lease:*)",
+        "Bash(git commit --no-verify:*)", "Bash(git commit -n:*)", "Bash(git push --no-verify:*)",
+        "Bash(git config core.hooksPath:*)", "Bash(git reset --hard:*)",
+        "Edit(./.agentic/kit/**)", "Write(./.agentic/kit/**)",
+        "Edit(./.agentic/locks/**)", "Write(./.agentic/locks/**)",
+        "Edit(./.github/workflows/**)", "Write(./.github/workflows/**)",
+        "Edit(./.github/CODEOWNERS)", "Write(./.github/CODEOWNERS)",
+        "Edit(./.claude/settings.json)", "Write(./.claude/settings.json)",
+    ]
+    for pattern in no_read:
+        path = pattern if pattern.startswith(("./", "**", "/")) else f"./{pattern}"
+        rules.append(f"Read({path})")
+    return rules
+
+
+def merge_claude_settings(target: Path, no_read: list[str]) -> None:
+    import json
+    path = target / ".claude" / "settings.json"
+    data = {}
+    if path.exists():
+        try:
+            data = json.loads(path.read_text("utf-8"))
+        except json.JSONDecodeError:
+            say(".claude/settings.json isn't valid JSON. Left unchanged; add the deny rules by hand.")
+            return
+    deny = data.setdefault("permissions", {}).setdefault("deny", [])
+    added = [r for r in claude_deny_rules(no_read) if r not in deny]
+    if not added:
+        return
+    deny.extend(added)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2) + "\n", "utf-8", newline="\n")
+    say(f".claude/settings.json: {len(added)} deny rule(s) added (force-push, hook bypass, protected paths, secrets)")
+
+
+DEPENDABOT_ECOSYSTEMS = {"python": "pip", "javascript": "npm", "typescript": "npm", "dotnet": "nuget",
+                         "rust": "cargo", "go": "gomod"}
+
+
+def write_dependabot(target: Path, stacks: list[str]) -> None:
+    dst = target / ".github" / "dependabot.yml"
+    if dst.exists():
+        say(".github/dependabot.yml exists. Kept")
+        return
+    ecosystems = ["github-actions"] + sorted({DEPENDABOT_ECOSYSTEMS[s] for s in stacks if s in DEPENDABOT_ECOSYSTEMS})
+    lines = ["# agentic-dev-kit: weekly dependency and pinned-action updates. Review them like any other change.",
+             "version: 2", "updates:"]
+    for eco in ecosystems:
+        lines += [f'  - package-ecosystem: "{eco}"', '    directory: "/"', "    schedule:",
+                  '      interval: "weekly"', "    open-pull-requests-limit: 5"]
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text("\n".join(lines) + "\n", "utf-8", newline="\n")
+    say(f".github/dependabot.yml added ({', '.join(ecosystems)})")
+
+
+DEVCONTAINER_FEATURES = {
+    "javascript": ("ghcr.io/devcontainers/features/node:1", {"version": "22"}),
+    "typescript": ("ghcr.io/devcontainers/features/node:1", {"version": "22"}),
+    "dotnet": ("ghcr.io/devcontainers/features/dotnet:2", {"version": "10.0"}),
+    "go": ("ghcr.io/devcontainers/features/go:1", {}),
+    "rust": ("ghcr.io/devcontainers/features/rust:1", {}),
+}
+DEVCONTAINER_APT = {"cpp": "cmake clang-format clang-tidy cppcheck", "lua": "lua5.4 liblua5.4-dev luarocks"}
+
+
+def write_devcontainer(target: Path, stacks: list[str]) -> None:
+    import json
+    dst = target / ".devcontainer" / "devcontainer.json"
+    if dst.exists():
+        say(".devcontainer/devcontainer.json exists. Kept")
+        return
+    features = {"ghcr.io/devcontainers/features/python:1": {"version": "3.12"}}  # the kit itself needs Python
+    for s in stacks:
+        if s in DEVCONTAINER_FEATURES:
+            ref, opts = DEVCONTAINER_FEATURES[s]
+            features[ref] = opts
+    post = ["python -m pip install --user ruff mypy pytest pytest-cov"] if "python" in stacks else []
+    apt = " ".join(DEVCONTAINER_APT[s] for s in stacks if s in DEVCONTAINER_APT)
+    if apt:
+        post.insert(0, f"sudo apt-get update && sudo apt-get install -y {apt}")
+    if "lua" in stacks:
+        post.append("sudo luarocks install busted && sudo luarocks install luacheck")
+    config = {
+        "name": f"{target.name} (agentic-dev-kit sandbox)",
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+        "features": features,
+        "remoteUser": "vscode",
+        "containerEnv": {"AGENTIC_SANDBOX": "1"},
+        "postCreateCommand": " && ".join(post) or "true",
+    }
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(json.dumps(config, indent=2) + "\n", "utf-8", newline="\n")
+    say(".devcontainer/devcontainer.json added (sandbox for headless agent runs)")
+
+
+def copy_review_workflow(target: Path) -> None:
+    dst = target / ".github" / "workflows" / "agent-review.yml"
+    if dst.exists():
+        say(".github/workflows/agent-review.yml exists. Kept")
+        return
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(KIT / "ci" / "github" / "agent-review.yml", dst)
+    say(".github/workflows/agent-review.yml added (needs an ANTHROPIC_API_KEY repository secret)")
+
+
+PRETTIER_IGNORE = (".agentic/", ".claude/", ".cursor/", ".github/agents/", ".github/skills/",
+                   "AGENTS.md", "CLAUDE.md", "GEMINI.md")
+
+
+def ensure_tool_ignores(target: Path, stacks: list[str]) -> None:
+    """Keep stack tools from formatting or linting the kit's vendored and generated files."""
+    if not {"javascript", "typescript"} & set(stacks):
+        return
+    path = target / ".prettierignore"
+    text = path.read_text("utf-8") if path.exists() else ""
+    have = {line.strip() for line in text.splitlines()}
+    missing = [p for p in PRETTIER_IGNORE if p not in have]
+    if missing:
+        with path.open("a", encoding="utf-8", newline="\n") as fh:
+            fh.write(("\n" if text and not text.endswith("\n") else "")
+                     + "# agentic-dev-kit: vendored and generated files\n" + "\n".join(missing) + "\n")
+        say(".prettierignore: kit and generated files excluded")
+
+
 GITATTR_RULES = (
     "# agentic-dev-kit: hooks must keep LF endings or they fail in sh / Git Bash",
     ".agentic/kit/gates/hooks/* text eol=lf",
@@ -330,6 +495,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--domains", help="comma list of domain ids")
     p.add_argument("--standards", help="comma list of coding-standards packs (see standards/README.md)")
     p.add_argument("--tools", help=f"comma list: {', '.join(TOOLS)} (default claude,generic)")
+    p.add_argument("--owners", help="comma list of CODEOWNERS for protected paths, e.g. @me,@org/leads")
+    p.add_argument("--ci-review", action="store_true", help="add the AI PR-review workflow (needs ANTHROPIC_API_KEY)")
+    p.add_argument("--devcontainer", action="store_true", help="add a devcontainer sandbox for headless agent runs")
     p.add_argument("--update", action="store_true", help="refresh kit + generated files only")
     p.add_argument("--no-hooks", action="store_true")
     p.add_argument("--no-ci", action="store_true")
@@ -384,8 +552,11 @@ def main(argv: list[str] | None = None) -> int:
     write_coding_standards(target, standards)
     if not standards:
         standards_hint(stacks)
+    full_cfg = tomllib.loads(cfg_path.read_text("utf-8")) if cfg_path.exists() else {}
+    no_read = full_cfg.get("safety", {}).get("no_read", [])
     if "claude" in tools:
         pointer_file(target, "CLAUDE.md")
+        merge_claude_settings(target, no_read)
     if "gemini" in tools:
         pointer_file(target, "GEMINI.md")
 
@@ -394,10 +565,18 @@ def main(argv: list[str] | None = None) -> int:
     build.build(target, tools, domains, standards)
 
     ensure_gitattributes(target)
+    ensure_tool_ignores(target, stacks)
     if not a.no_hooks:
         set_hooks(target)
     if not a.no_ci and not a.update:
         copy_ci(target)
+        write_dependabot(target, stacks)
+    if a.ci_review:
+        copy_review_workflow(target)
+    if a.devcontainer:
+        write_devcontainer(target, stacks)
+    if not a.update or csv(a.owners):
+        write_codeowners(target, csv(a.owners))
 
     print("\nNext steps:")
     print("  1. Install each stack's tools, then check:  python .agentic/kit/gates/gate.py list")

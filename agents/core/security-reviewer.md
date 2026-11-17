@@ -5,7 +5,7 @@ kind: core
 summary: Reviews a change for security issues (untrusted input, injection, authz, secrets, crypto misuse, unsafe deserialization, dependency and supply-chain risk) and runs the stack's audit tools.
 tools: [read, search, shell, web]
 skills: [threat-check, handoff]
-writes: [tests/security/**, .agentic/findings/**, .agentic/handoffs/**]
+writes: [tests/security/**, .agentic/locks/**, .agentic/findings/**, .agentic/handoffs/**]
 fresh_context: true
 model_hint: strong
 ---

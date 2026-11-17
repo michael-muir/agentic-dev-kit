@@ -1,0 +1,112 @@
+# CI for agentic-dev-kit itself: validate the kit, run the smoke test on Windows and Linux,
+# and run the real gate against a sample project for every stack and standards pack.
+name: kit-ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: python adapters/build.py --check
+      - run: python docs/smoke_test.py
+
+  fixtures:
+    name: fixture ${{ matrix.stack }} [${{ matrix.standards || 'no pack' }}]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { stack: python, standards: "" }
+          - { stack: python, standards: python-pep8 }
+          - { stack: python, standards: python-strict }
+          - { stack: dotnet, standards: "" }
+          - { stack: dotnet, standards: dotnet-microsoft }
+          - { stack: dotnet, standards: dotnet-stylecop }
+          - { stack: javascript, standards: "" }
+          - { stack: javascript, standards: javascript-recommended }
+          - { stack: typescript, standards: "" }
+          - { stack: typescript, standards: typescript-strict }
+          - { stack: rust, standards: "" }
+          - { stack: rust, standards: rust-api-guidelines }
+          - { stack: go, standards: "" }
+          - { stack: go, standards: go-effective }
+          - { stack: go, standards: go-uber }
+          - { stack: cpp, standards: "" }
+          - { stack: cpp, standards: cpp-core-guidelines }
+          - { stack: cpp, standards: cpp-google }
+          - { stack: lua, standards: "" }
+          - { stack: lua, standards: lua-default }
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - if: matrix.stack == 'python'
+        run: pip install ruff mypy pytest pytest-cov
+
+      - if: matrix.stack == 'javascript' || matrix.stack == 'typescript'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+
+      - if: matrix.stack == 'dotnet'
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+
+      - if: matrix.stack == 'go'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+      - if: matrix.stack == 'go'
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - if: matrix.stack == 'rust'
+        uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master (2026-11)
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - if: matrix.stack == 'cpp'
+        run: sudo apt-get update && sudo apt-get install -y cmake clang-format clang-tidy cppcheck
+
+      - if: matrix.stack == 'lua'
+        uses: leafo/gh-actions-lua@32909a2dea0a48c433aec79e7fcd31b4cd55800f # v13.1.0
+        with:
+          luaVersion: "5.4"
+      - if: matrix.stack == 'lua'
+        uses: leafo/gh-actions-luarocks@1c4a92caecc8f6850f673cbadfd57b3e555417ce # v6.1.1
+      - if: matrix.stack == 'lua'
+        run: |
+          luarocks install busted
+          luarocks install luacheck
+          cargo install stylua --locked --version 2.6.0
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Gate against fixture
+        run: python fixtures/fixture_test.py --stack ${{ matrix.stack }} --standards "${{ matrix.standards }}"

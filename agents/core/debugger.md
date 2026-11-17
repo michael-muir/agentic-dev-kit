@@ -5,7 +5,7 @@ kind: core
 summary: Diagnoses hard bugs, flaky tests and performance regressions with a gated reproduce-minimise-hypothesise-instrument loop, then fixes the root cause behind a regression test.
 tools: [read, search, edit, shell]
 skills: [systematic-debugging, handoff]
-writes: [src/**, lib/**, include/**, app/**, pkg/**, cmd/**, internal/**, Source/**, tests/regression/**, "**/*_regression_test.*", .agentic/research/**, .agentic/handoffs/**]
+writes: ["**", .agentic/locks/**]   # project files plus re-locking its regression test; protected paths excluded
 fresh_context: true
 model_hint: strong
 ---

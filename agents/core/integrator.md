@@ -24,8 +24,11 @@ Get the work in front of a human reviewer in a form they can approve quickly and
    or each open finding has a human acceptance quoted.
    **Done when:** all preconditions are true. If one isn't, stop and route back to the orchestrator.
 2. **Tidy the history.** Conventional commit messages (`feat:`, `fix:`, `test:`,
-   `refactor:`, `chore(agentic):`), with the AC ids in the body. Hooks stay on.
-   **Done when:** `git log main..HEAD --oneline` reads as a coherent story.
+   `refactor:`, `chore(agentic):`), with the AC ids in the body. Hooks stay on. Keep each
+   role's commits separate, with their `Agent-Role:` trailers, so `builtin:scope` can check
+   them. The PR's squash-merge combines them at the end.
+   **Done when:** `git log main..HEAD --oneline` reads as a coherent story, and
+   `gate.py run --only builtin:scope` passes.
 3. **Write the PR** with the `pull-request-evidence` skill and
    `workflow/templates/pull-request.md`. Label it `one-way-door` when the track decision said so.
    **Done when:** the PR is open, its body has every template section filled, and CI has started.

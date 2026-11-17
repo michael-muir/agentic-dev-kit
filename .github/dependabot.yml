@@ -1,0 +1,8 @@
+# Keeps the SHA-pinned actions in this repo's workflows, and in ci/github/ templates, current.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directories: ["/", "/ci/github"]
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

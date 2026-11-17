@@ -54,6 +54,21 @@ skip = ["python:types"]                  # skip by id. Say why in a comment, and
 | `builtin:debug-tags` | all | a non-Markdown file still contains a temporary `DEBUG-` + 4 hex digits marker. |
 | `builtin:test-lock` | all | a file in `.agentic/locks/tests.lock.json` was modified or deleted. |
 | `builtin:trace` | pre-push, ci | an AC id in an `approved`/`implemented` spec isn't named by any test file (matched case-insensitively, `-` or `_`). |
+| `builtin:scope` | pre-push, ci | a commit since the merge-base with `[gate] base_branch` carries an `Agent-Role:` trailer, and changes a file outside that role's `writes:`, or names an unknown role. |
+
+### Role scopes
+`builtin:scope` checks each agent commit (one with an `Agent-Role: <id>` trailer) against
+that role's `writes:` list from its agent file, plus any `[roles.<id>] writes` in
+`.agentic/config.toml`. Three rules apply:
+- `.agentic/STATE.md`, `.agentic/tasks/**` and `.agentic/handoffs/**` are open to every role.
+- **Protected paths** (`.agentic/kit/`, locks, `config.toml`, `CODING_STANDARDS.md`,
+  `GLOSSARY.md`, specs, decisions, findings, `.github/workflows/`, CODEOWNERS,
+  `dependabot.yml`, `.claude/settings.json`, `.devcontainer/`) need a pattern that names
+  them. A catch-all `**` doesn't count.
+- Commits without the trailer are treated as human, and are governed by CODEOWNERS and review.
+
+The base comes from `AGENTIC_BASE`, `GITHUB_BASE_REF` (on PRs), `origin/<base_branch>` or
+`<base_branch>`, in that order.
 
 ### What gets locked
 `lock-tests` locks test files (matched by the stack's `test_globs`) that **name an AC id**

@@ -5,7 +5,7 @@ test_globs = ["tests/**", "test/**", "**/test_*.py", "**/*_test.py"]
 [[step]]
 name = "format"
 category = "format"
-cmd = "ruff format --check ."
+cmd = "ruff format --check --extend-exclude .agentic ."
 stages = ["pre-commit", "pre-push", "ci"]
 when_files = ["**/*.py"]
 install = "pip install ruff"
@@ -13,7 +13,7 @@ install = "pip install ruff"
 [[step]]
 name = "lint"
 category = "lint"
-cmd = "ruff check ."
+cmd = "ruff check --extend-exclude .agentic ."
 stages = ["pre-commit", "pre-push", "ci"]
 when_files = ["**/*.py"]
 install = "pip install ruff"
@@ -21,7 +21,7 @@ install = "pip install ruff"
 [[step]]
 name = "types"
 category = "types"
-cmd = "mypy ."
+cmd = 'mypy --exclude "(^|/)\.agentic/" .'
 stages = ["pre-push", "ci"]
 when_files = ["**/*.py"]
 install = "pip install mypy"

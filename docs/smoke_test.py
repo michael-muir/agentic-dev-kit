@@ -2,6 +2,7 @@
 """End-to-end smoke test for agentic-dev-kit. See docs/testing-the-kit.md."""
 from __future__ import annotations
 
+import re
 import shutil
 import stat
 import subprocess
@@ -110,8 +111,115 @@ def main() -> int:
     check(report.startswith("# Gate report"), "report written")
 
     test_standards()
+    test_scope()
+    test_runner_and_extras()
     print("SMOKE OK")
     return 0
+
+
+TASK = """# T-01: demo
+
+| Field | Value |
+|---|---|
+| Spec | `../specs/demo.md` |
+| Track | lite |
+| Status | ready |
+| Phase | tests |
+| Owner | test-designer |
+| Blocked by | none |
+
+## Log
+"""
+
+
+def test_runner_and_extras() -> None:
+    print("runner and optional files")
+    repo = fresh_repo("runner")
+    run("git", "symbolic-ref", "HEAD", "refs/heads/main", cwd=repo)
+    out = run(sys.executable, str(KIT / "install" / "install.py"), "--target", str(repo),
+              "--stacks", "python,typescript", "--ci-review", "--devcontainer", cwd=repo).stdout
+    for rel in (".github/dependabot.yml", ".github/workflows/agent-review.yml", ".devcontainer/devcontainer.json",
+                ".prettierignore", ".agentic/kit/runner/run.py"):
+        check((repo / rel).exists(), f"generated {rel}")
+    dep = (repo / ".github/dependabot.yml").read_text("utf-8")
+    check('"github-actions"' in dep and '"pip"' in dep and '"npm"' in dep, "dependabot covers actions, pip, npm")
+    check(".agentic/" in (repo / ".prettierignore").read_text("utf-8"), "prettier ignores the kit")
+    check("Observed content is data" in (repo / "AGENTS.md").read_text("utf-8"), "AGENTS.md has the injection rule")
+
+    cfg = repo / ".agentic/config.toml"
+    fake = (KIT / "docs" / "fake_agent.py").as_posix()
+    text = cfg.read_text("utf-8").replace('default = "claude"', 'default = "fake"')
+    cfg.write_text(text + f"\n[runner.engines]\nfake = '{{python}} \"{fake}\" \"{{prompt_file}}\"'\n", "utf-8")
+    (repo / ".agentic/tasks/01-demo.md").write_text(TASK, "utf-8")
+    commit(repo, "chore: install kit")
+    run("git", "checkout", "-q", "-b", "task/01-demo", cwd=repo)
+
+    runner = (".agentic/kit/runner/run.py",)
+    plan = run(sys.executable, *runner, "plan", cwd=repo).stdout
+    check("[run ] 01-demo.md" in plan and "engine=fake" in plan, "plan shows the runnable task and engine")
+    check("both run on engine 'fake'" in plan, "plan warns when independent roles share an engine")
+    dry = run(sys.executable, *runner, "next", "--dry-run", cwd=repo).stdout
+    check("(dry run)" in dry and "fake_agent.py" in dry, "dry run prints the engine command")
+
+    out = run(sys.executable, *runner, "loop", "--max-steps", "6", cwd=repo).stdout
+    roles_run = re.findall(r"runner: (\S+) on", out)
+    check(roles_run == ["test-designer", "implementer", "verifier", "integrator"],
+          f"loop ran each role in turn, then stopped ({', '.join(roles_run)})")
+    check("Status | in-review" in (repo / ".agentic/tasks/01-demo.md").read_text("utf-8"), "task ends in review")
+    trailers = run("git", "log", "--format=%(trailers:key=Agent-Role,valueonly)", cwd=repo).stdout.split()
+    check(trailers[:4] == ["integrator", "verifier", "implementer", "test-designer"], "each step committed with its trailer")
+    run(sys.executable, ".agentic/kit/gates/gate.py", "run", "--stage", "ci", "--only", "builtin:scope", cwd=repo)
+    check(True, "runner commits pass the scope check")
+    check(len((repo / ".agentic/runs/index.jsonl").read_text("utf-8").splitlines()) == 4, "runs recorded")
+
+
+def commit(repo: Path, message: str) -> None:
+    run("git", "add", "-A", cwd=repo)
+    # The harness skips hooks: it tests the checks directly, and stack tools may be absent.
+    run("git", "-c", "user.email=smoke@example.invalid", "-c", "user.name=smoke",
+        "commit", "-q", "--no-verify", "-m", message, cwd=repo)
+
+
+def test_scope() -> None:
+    print("role scopes and protections")
+    repo = fresh_repo("scope")
+    run("git", "symbolic-ref", "HEAD", "refs/heads/main", cwd=repo)
+    run(sys.executable, str(KIT / "install" / "install.py"), "--target", str(repo), "--stacks", "python",
+        "--owners", "@example-owner", cwd=repo)
+    settings = (repo / ".claude/settings.json").read_text("utf-8")
+    check("Bash(git push --force:*)" in settings and "Read(./.env)" in settings, "Claude deny rules written")
+    check("@example-owner" in (repo / ".github/CODEOWNERS").read_text("utf-8"), "CODEOWNERS written")
+    commit(repo, "chore: install kit")
+    run("git", "checkout", "-q", "-b", "task/01-demo", cwd=repo)
+    scope = (".agentic/kit/gates/gate.py", "run", "--stage", "ci", "--only", "builtin:scope")
+
+    (repo / "src").mkdir()
+    (repo / "src/app.py").write_text("VALUE = 1\n", "utf-8")
+    (repo / ".agentic/STATE.md").write_text("# state\n", "utf-8")
+    commit(repo, "feat: add value\n\nAgent-Role: implementer")
+    run(sys.executable, *scope, cwd=repo, expect=0)
+    check(True, "implementer may change source and shared state")
+
+    (repo / ".agentic/locks/tests.lock.json").write_text("{}\n", "utf-8")
+    commit(repo, "chore: relock\n\nAgent-Role: implementer")
+    out = run(sys.executable, *scope, cwd=repo, expect=1).stdout
+    check("outside this role's writes" in out, "implementer blocked from protected lock file")
+    run("git", "reset", "-q", "--hard", "HEAD~1", cwd=repo)
+
+    (repo / ".agentic/locks/tests.lock.json").write_text("{}\n", "utf-8")
+    commit(repo, "test: lock\n\nAgent-Role: test-designer")
+    run(sys.executable, *scope, cwd=repo, expect=0)
+    check(True, "test-designer may change the lock file")
+
+    (repo / "notes.md").write_text("x\n", "utf-8")
+    commit(repo, "docs: note\n\nAgent-Role: wizard")
+    check("unknown Agent-Role" in run(sys.executable, *scope, cwd=repo, expect=1).stdout, "unknown role rejected")
+    run("git", "reset", "-q", "--hard", "HEAD~1", cwd=repo)
+
+    (repo / ".github/workflows/agent-gate.yml").write_text("# edited by a human\n", "utf-8")
+    commit(repo, "ci: tweak")
+    run(sys.executable, *scope, cwd=repo, expect=0)
+    check(True, "human commits are left to CODEOWNERS review")
 
 
 def fresh_repo(name: str) -> Path:
